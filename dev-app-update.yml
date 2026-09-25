@@ -1,0 +1,8 @@
+# Used ONLY for testing the updater in a dev / unpacked build.
+# electron-updater reads this when the app is not packaged AND you launch with
+# RAM_TEST_UPDATES=1. Packaged builds ignore this and use the generated
+# app-update.yml from the "publish" config in package.json.
+owner: Sacttt
+repo: roblox-account-manager
+provider: github
+updaterCacheDirName: roblox-account-manager-updater

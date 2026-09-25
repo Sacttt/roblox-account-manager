@@ -1,0 +1,14 @@
+# Dependencies & build output
+node_modules/
+dist/
+
+# Local user data — NEVER commit (accounts, cookies, settings, caches)
+accounts.json
+settings.json
+presets.json
+avatar-cache/
+*.log
+
+# Editor/OS cruft
+.DS_Store
+Thumbs.db

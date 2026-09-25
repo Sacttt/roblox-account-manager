@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Roblox Account Manager</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <!-- Custom Frameless Titlebar -->
+  <div class="custom-titlebar">
+    <div class="titlebar-drag">
+      <div class="titlebar-brand">
+        <img src="icon.png" class="brand-logo-mini" alt="Logo" />
+        <span class="app-title-text">ROBLOX MANAGER</span>
+        <span class="app-badge-pro">PRO</span>
+      </div>
+    </div>
+    <div class="window-controls">
+      <button class="win-btn" id="win-min" title="Minimize">
+        <svg width="10" height="2" viewBox="0 0 10 2"><line x1="0" y1="1" x2="10" y2="1" stroke="currentColor" stroke-width="1.6"/></svg>
+      </button>
+      <button class="win-btn" id="win-max" title="Maximize">
+        <svg width="10" height="10" viewBox="0 0 10 10"><rect x="0.8" y="0.8" width="8.4" height="8.4" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
+      </button>
+      <button class="win-btn win-close" id="win-close" title="Close">
+        <svg width="10" height="10" viewBox="0 0 10 10"><path d="M1 1 L9 9 M9 1 L1 9" stroke="currentColor" stroke-width="1.6"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <div class="app">
+    <!-- Luxury Glass Sidebar -->
+    <nav class="sidebar">
+      <div class="brand">
+        <div class="brand-mark">
+          <img src="icon.png" class="brand-logo-img" alt="Logo" />
+        </div>
+        <div class="brand-text">
+          <span class="brand-name">Roblox Manager</span>
+          <span class="brand-sub">Multi-Account Launcher</span>
+        </div>
+      </div>
+
+      <div class="nav-section-title">NAVIGATION</div>
+      <div class="nav-group">
+        <button class="nav-item active" data-view="dashboard">
+          <span class="nav-icon">&#9635;</span>
+          <span class="nav-label">Dashboard</span>
+          <span class="nav-badge" id="badge-total">0</span>
+        </button>
+        <button class="nav-item" data-view="accounts">
+          <span class="nav-icon">&#9673;</span>
+          <span class="nav-label">All Accounts</span>
+        </button>
+        <button class="nav-item" data-view="favorites">
+          <span class="nav-icon">&#9733;</span>
+          <span class="nav-label">Favorites</span>
+          <span class="nav-badge star-badge" id="badge-fav">0</span>
+        </button>
+        <button class="nav-item" data-view="settings">
+          <span class="nav-icon">&#9881;</span>
+          <span class="nav-label">Settings</span>
+        </button>
+      </div>
+
+      <!-- Quick Live Stats Panel -->
+      <div class="sidebar-presence-box">
+        <div class="pres-title">LIVE STATUS</div>
+        <div class="pres-row">
+          <span class="dot dot-online"></span>
+          <span class="pres-name">Online / In-Game</span>
+          <span class="pres-val" id="stat-online-count">0</span>
+        </div>
+        <div class="pres-row">
+          <span class="dot dot-offline"></span>
+          <span class="pres-name">Offline</span>
+          <span class="pres-val" id="stat-offline-count">0</span>
+        </div>
+      </div>
+
+      <div class="sidebar-footer">
+        <div class="sync-indicator">
+          <span class="pulse-dot"></span>
+          <span id="stat-lastsync">Not synced yet</span>
+        </div>
+      </div>
+    </nav>
+
+    <!-- Main Content Area -->
+    <main class="main">
+      <header class="topbar">
+        <div class="search-wrap">
+          <svg class="search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input id="search-input" type="text" placeholder="Search accounts (name, user, notes)..." autocomplete="off" />
+          <span class="search-shortcut">Ctrl+F</span>
+        </div>
+
+        <div class="topbar-actions">
+          <div class="select-wrapper">
+            <select id="sort-select" title="Sort accounts">
+              <option value="recent">Recently Used</option>
+              <option value="username">Username (A–Z)</option>
+              <option value="display">Display Name (A–Z)</option>
+              <option value="favorite">Favorites First</option>
+              <option value="presence">Online First</option>
+            </select>
+          </div>
+          <button class="btn ghost btn-refresh" id="refresh-all-btn" title="Refresh all profiles and avatars">
+            <svg class="spin-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+            <span>Sync All</span>
+          </button>
+          <button class="btn primary btn-glow" id="add-account-btn">
+            <span class="btn-plus">+</span> Add Account
+          </button>
+        </div>
+      </header>
+
+      <!-- View Header Banner -->
+      <section class="view-header" id="view-title-wrap">
+        <div class="view-header-left">
+          <h1 id="view-title">My Accounts</h1>
+          <p id="view-subtitle" class="view-subtitle">Select accounts to launch individually or join games together.</p>
+        </div>
+        <div class="view-header-right">
+          <button class="btn ghost small" id="toggle-select-all-btn">Select All</button>
+          <div class="glass-pill" id="active-filter-pill">
+            <span class="pill-dot"></span>
+            <span id="active-count-text">0 accounts</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Game / Private Server Launcher Command Bar -->
+      <section class="game-launcher-panel" id="game-launcher-panel">
+        <div class="game-input-container">
+          <div class="game-input-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+              <rect x="2" y="6" width="20" height="12" rx="3"/>
+              <path d="M6 12h4M8 10v4M15 11h.01M18 13h.01"/>
+            </svg>
+          </div>
+          <input type="text" id="game-target-input" placeholder="Required: Place ID, Game URL, or VIP private server link..." autocomplete="off" spellcheck="false" />
+          <button class="btn ghost small" id="save-preset-btn" title="Save current target as a preset">+ Save Preset</button>
+          <button class="btn ghost small" id="clear-target-btn" title="Clear target input" style="display:none;">✕</button>
+        </div>
+        <div class="game-presets-row" id="game-presets-row">
+          <span class="presets-label">QUICK PRESETS:</span>
+          <!-- Dynamic presets populated via renderer.js -->
+        </div>
+      </section>
+
+      <!-- Account Cards Grid -->
+      <section class="grid" id="account-grid"></section>
+
+      <!-- Floating Batch Actions Bar (when accounts are selected) -->
+      <div class="floating-batch-bar" id="floating-batch-bar" hidden>
+        <div class="batch-left">
+          <span class="batch-count-badge" id="batch-count-badge">0</span>
+          <span class="batch-label" id="batch-count-text">accounts selected</span>
+          <button class="btn link-btn" id="batch-clear-btn">Deselect All</button>
+        </div>
+        <div class="batch-right">
+          <button class="btn ghost small" id="batch-sync-btn">🔄 Sync</button>
+          <button class="btn ghost small" id="batch-fav-btn">★ Star</button>
+          <button class="btn primary btn-glow" id="batch-launch-btn">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+            <span>Launch Together (<span id="batch-launch-count">0</span>)</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Empty State -->
+      <section class="empty-state" id="empty-state" hidden>
+        <div class="empty-illustration">
+          <img src="icon.png" class="empty-logo" alt="Roblox Manager" />
+        </div>
+        <h3 id="empty-title">No accounts added yet</h3>
+        <p id="empty-desc">Add your first Roblox account to start organizing your multi-account launcher.</p>
+        <button class="btn primary btn-large" id="empty-add-btn">+ Add Account</button>
+      </section>
+
+      <!-- Settings View -->
+      <section class="settings-panel" id="settings-panel" hidden>
+        <div class="settings-header">
+          <h2>Application Settings</h2>
+          <p>Customize launch behaviors, UI animations, and manage local backups.</p>
+        </div>
+
+        <div class="settings-grid">
+          <div class="settings-card">
+            <div class="card-icon-title">
+              <span class="icon-bubble">&#128640;</span>
+              <div>
+                <h3>Multi Roblox &amp; Launching</h3>
+                <p class="settings-desc">Run several accounts at the same time, each in its own Roblox window.</p>
+              </div>
+            </div>
+            <div class="toggles-list">
+              <label class="switch-row">
+                <div class="switch-info">
+                  <strong>Multi Roblox</strong>
+                  <span>Holds Roblox's single-window lock so more clients can open. Turn it on while Roblox is closed. Roblox may treat multiple clients as suspicious; use at your own risk.</span>
+                </div>
+                <input type="checkbox" id="multi-roblox-toggle" checked />
+                <span class="switch"></span>
+              </label>
+            </div>
+            <p class="settings-desc" id="multi-roblox-status" style="margin:10px 0 12px;">Checking…</p>
+            <div class="select-wrapper" style="margin-bottom:10px;">
+              <select id="launcher-select" title="Program that opens Roblox">
+                <option value="auto">Launcher: Automatic (Bloxstrap / Fishstrap if installed)</option>
+                <option value="default">Launcher: Official Roblox</option>
+                <option value="bloxstrap">Launcher: Bloxstrap</option>
+                <option value="fishstrap">Launcher: Fishstrap</option>
+                <option value="client">Launcher: RobloxPlayerBeta.exe directly</option>
+              </select>
+            </div>
+            <div class="select-wrapper" style="margin-bottom:12px;">
+              <select id="launch-delay-select" title="Wait between accounts when launching together">
+                <option value="4">Launch Together delay: 4 seconds</option>
+                <option value="6">Launch Together delay: 6 seconds</option>
+                <option value="10">Launch Together delay: 10 seconds</option>
+                <option value="15">Launch Together delay: 15 seconds</option>
+              </select>
+            </div>
+            <div class="settings-actions">
+              <button class="btn ghost danger" id="close-all-roblox-btn">&#10005; Close all Roblox windows</button>
+            </div>
+          </div>
+
+          <div class="settings-card">
+            <div class="card-icon-title">
+              <span class="icon-bubble">&#9203;</span>
+              <div>
+                <h3>Live Profile &amp; Presence Refresh</h3>
+                <p class="settings-desc">Automatically update avatars and live online/in-game status.</p>
+              </div>
+            </div>
+            <div class="select-wrapper">
+              <select id="refresh-interval-select">
+                <option value="5">Every 5 minutes (Real-time)</option>
+                <option value="15">Every 15 minutes</option>
+                <option value="30">Every 30 minutes</option>
+                <option value="60">Every hour</option>
+                <option value="0">Manual only</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="settings-card">
+            <div class="card-icon-title">
+              <span class="icon-bubble">&#10024;</span>
+              <div>
+                <h3>Appearance &amp; Experience</h3>
+                <p class="settings-desc">Interface animations and desktop toast notifications.</p>
+              </div>
+            </div>
+            <div class="toggles-list">
+              <label class="switch-row">
+                <div class="switch-info">
+                  <strong>Smooth Visual Effects &amp; Motions</strong>
+                  <span>Enables glassmorphic glow transitions and card animations.</span>
+                </div>
+                <input type="checkbox" id="animations-toggle" checked />
+                <span class="switch"></span>
+              </label>
+              <label class="switch-row">
+                <div class="switch-info">
+                  <strong>Desktop Toast Notifications</strong>
+                  <span>Notify upon launch, sync, and account updates.</span>
+                </div>
+                <input type="checkbox" id="notifications-toggle" checked />
+                <span class="switch"></span>
+              </label>
+            </div>
+          </div>
+
+          <div class="settings-card">
+            <div class="card-icon-title">
+              <span class="icon-bubble">&#128190;</span>
+              <div>
+                <h3>Backup &amp; Storage</h3>
+                <p class="settings-desc">All data is kept 100% locally on your computer.</p>
+              </div>
+            </div>
+            <div class="settings-actions">
+              <button class="btn ghost" id="export-data-btn">&#8681; Export Backup (JSON)</button>
+              <button class="btn ghost" id="import-data-btn">&#8679; Import Backup</button>
+              <button class="btn ghost" id="open-data-btn">&#128194; Open Data Folder</button>
+              <button class="btn ghost danger" id="clear-cache-btn">&#128465; Clear Avatar Cache</button>
+            </div>
+          </div>
+
+          <div class="settings-card">
+            <div class="card-icon-title">
+              <span class="icon-bubble">&#128260;</span>
+              <div>
+                <h3>About &amp; Updates</h3>
+                <p class="settings-desc">Version <span id="about-version">…</span> · updates install from the official signed release.</p>
+              </div>
+            </div>
+            <p class="settings-desc" id="update-settings-status" style="margin:2px 0 12px;">You're up to date.</p>
+            <div class="settings-actions">
+              <button class="btn ghost" id="check-updates-btn">&#8635; Check for updates</button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Add Account Modal (Luxury Redesign) -->
+  <div class="modal-overlay" id="add-modal-overlay" hidden>
+    <div class="modal glass-modal add-modal-luxury" id="add-modal">
+      <div class="modal-header">
+        <div>
+          <h2>Add Roblox Account</h2>
+          <p class="modal-sub">Link your accounts for instant 1-click launching and game joining.</p>
+        </div>
+        <button class="modal-close-btn" id="add-close-x">&times;</button>
+      </div>
+
+      <!-- Luxury Segmented Tab Control (2 Tabs) -->
+      <div class="segmented-control two-tabs">
+        <button class="seg-btn active" id="tab-cookie" data-tab="cookie">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+          <span>Cookie Auto-Login</span>
+        </button>
+        <button class="seg-btn" id="tab-web" data-tab="web">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+          <span>Roblox Web Sign-In</span>
+        </button>
+      </div>
+
+      <!-- Tab 1: Cookie Login -->
+      <div class="modal-body tab-content" id="add-tab-cookie">
+        <div class="cookie-guide-card">
+          <div class="guide-header">
+            <span class="guide-badge">QUICK GUIDE</span>
+            <span class="guide-title">How to copy your .ROBLOSECURITY cookie</span>
+          </div>
+          <ol class="guide-steps">
+            <li>Log into <strong>roblox.com</strong> on your browser.</li>
+            <li>Press <kbd>F12</kbd> &rarr; <strong>Application</strong> &rarr; <strong>Cookies</strong> &rarr; <code>https://www.roblox.com</code></li>
+            <li>Copy the value of <code>.ROBLOSECURITY</code> and paste below (stored locally on your PC).</li>
+          </ol>
+        </div>
+
+        <label class="field cookie-field">
+          <div class="field-header-row">
+            <span>Roblox Cookie <strong class="req">*</strong></span>
+            <button type="button" class="btn link-btn toggle-cookie-visibility-btn" id="toggle-cookie-vis-btn" title="Toggle cookie visibility">
+              <span id="vis-icon">👁</span>
+              <span id="vis-text">Show Cookie</span>
+            </button>
+          </div>
+          <textarea id="add-cookie-input" class="cookie-masked cookie-textarea" rows="7" placeholder="Paste your .ROBLOSECURITY cookie here..." spellcheck="false" autocomplete="off"></textarea>
+          <div id="cookie-error" class="field-error"></div>
+        </label>
+
+        <!-- Live Profile Preview -->
+        <div id="cookie-preview" class="cookie-preview-box" hidden>
+          <img id="preview-avatar" src="" alt="avatar" class="preview-avatar-img" />
+          <div class="preview-details">
+            <div class="preview-name" id="preview-display"></div>
+            <div class="preview-handle" id="preview-username"></div>
+            <div class="preview-id-tag" id="preview-uid"></div>
+          </div>
+          <span class="preview-verified-tag">✓ Verified Account</span>
+        </div>
+
+        <div id="cookie-extra-fields" hidden>
+          <label class="field" style="margin-top: 12px;">
+            <span>Custom Label / Nickname <em>(optional)</em></span>
+            <input id="add-cookie-nickname" type="text" placeholder="e.g. Main, Alt 1, Farming, Trading..." autocomplete="off" />
+          </label>
+          <label class="field" style="margin-top: 10px;">
+            <span>Private Notes <em>(optional)</em></span>
+            <textarea id="add-cookie-notes" rows="2" placeholder="Robux balance, inventory notes, goals..."></textarea>
+          </label>
+        </div>
+      </div>
+
+      <!-- Tab 2: In-App Web Sign-In -->
+      <div class="modal-body tab-content" id="add-tab-web" hidden>
+        <div class="web-login-banner">
+          <div class="web-login-icon">🌐</div>
+          <h3>Official Roblox In-App Sign In</h3>
+          <p>Opens the official, secure Roblox login page. As soon as you log in (with username/password, Email Code, or Quick Sign-in), the manager automatically links your account with 0 manual copying!</p>
+          <button class="btn primary btn-large btn-glow" id="start-web-login-btn">
+            <span>Open Roblox Login Window</span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="modal-actions" id="add-modal-actions">
+        <button class="btn ghost" id="add-cancel-btn">Cancel</button>
+        <button class="btn ghost btn-sm" id="cookie-validate-btn" hidden>Verify Cookie</button>
+        <button class="btn primary btn-glow" id="add-confirm-btn">Add Account</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Edit / Detail Modal -->
+  <div class="modal-overlay" id="detail-modal-overlay" hidden>
+    <div class="modal glass-modal detail-modal" id="detail-modal"></div>
+  </div>
+
+  <!-- Import Backup Modal -->
+  <div class="modal-overlay" id="import-modal-overlay" hidden>
+    <div class="modal glass-modal" id="import-modal">
+      <div class="modal-header">
+        <div>
+          <h2>Import Accounts Backup</h2>
+          <p class="modal-sub">Paste exported JSON backup code below to restore accounts.</p>
+        </div>
+        <button class="modal-close-btn" id="import-close-x">&times;</button>
+      </div>
+      <div class="modal-body">
+        <label class="field">
+          <span>Backup JSON</span>
+          <textarea id="import-json-input" rows="7" placeholder="Paste your accounts JSON here..."></textarea>
+        </label>
+      </div>
+      <div class="modal-actions">
+        <button class="btn ghost" id="import-cancel-btn">Cancel</button>
+        <button class="btn primary" id="import-confirm-btn">Import Accounts</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Confirm Dialog Modal -->
+  <div class="modal-overlay" id="confirm-modal-overlay" hidden>
+    <div class="modal glass-modal confirm-modal">
+      <div class="confirm-icon">&#9888;</div>
+      <h2 id="confirm-title">Are you sure?</h2>
+      <p id="confirm-body" class="modal-sub"></p>
+      <div class="modal-actions">
+        <button class="btn ghost" id="confirm-cancel-btn">Cancel</button>
+        <button class="btn danger" id="confirm-ok-btn">Confirm</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Update Modal -->
+  <div class="modal-overlay" id="update-modal-overlay" hidden>
+    <div class="modal glass-modal update-modal">
+      <div class="modal-header">
+        <div>
+          <h2 id="update-title">A new version is available</h2>
+          <p class="modal-sub" id="update-subtitle">Roblox Account Manager</p>
+        </div>
+        <span class="update-badge" id="update-critical-badge" hidden>Required</span>
+      </div>
+
+      <div class="update-version-row">
+        <div class="update-ver">
+          <span class="update-ver-label">Current</span>
+          <span class="update-ver-num" id="update-current-ver">—</span>
+        </div>
+        <div class="update-ver-arrow">&#8594;</div>
+        <div class="update-ver">
+          <span class="update-ver-label">New</span>
+          <span class="update-ver-num update-ver-new" id="update-new-ver">—</span>
+        </div>
+        <div class="update-ver update-ver-date">
+          <span class="update-ver-label">Released</span>
+          <span class="update-ver-num" id="update-date">—</span>
+        </div>
+      </div>
+
+      <div class="update-notes" id="update-notes" hidden>
+        <div class="update-notes-title">What's new</div>
+        <div class="update-notes-body" id="update-notes-body"></div>
+      </div>
+
+      <div class="update-progress-wrap" id="update-progress-wrap" hidden>
+        <div class="update-progress-track"><div class="update-progress-bar" id="update-progress-bar"></div></div>
+        <div class="update-progress-text" id="update-progress-text">Starting download…</div>
+      </div>
+
+      <p class="update-status-line" id="update-status-line" hidden></p>
+
+      <div class="modal-actions">
+        <button class="btn ghost" id="update-later-btn">Later</button>
+        <button class="btn ghost" id="update-notes-btn">View Release Notes</button>
+        <button class="btn primary" id="update-primary-btn">Update Now</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Context Menu -->
+  <div class="context-menu" id="context-menu" hidden></div>
+
+  <!-- Rich Toast Stack -->
+  <div class="toast-stack" id="toast-stack"></div>
+
+  <script src="renderer.js"></script>
+</body>
+</html>

@@ -1,0 +1,50 @@
+{
+  "name": "roblox-account-manager",
+  "version": "1.0.0",
+  "description": "A polished, local desktop manager for organizing your own Roblox accounts.",
+  "main": "main.js",
+  "author": "You",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder --win nsis --publish never",
+    "release": "electron-builder --win nsis --publish always"
+  },
+  "dependencies": {
+    "electron-updater": "^6.3.9"
+  },
+  "devDependencies": {
+    "electron": "^31.0.0",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "com.local.robloxaccountmanager",
+    "productName": "Roblox Account Manager",
+    "files": [
+      "main.js",
+      "multiroblox.js",
+      "updater.js",
+      "preload.js",
+      "src/**/*"
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "src/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "deleteAppDataOnUninstall": false,
+      "artifactName": "${productName}-Setup-${version}.${ext}"
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "Sacttt",
+      "repo": "roblox-account-manager"
+    },
+    "directories": {
+      "output": "dist"
+    }
+  }
+}
