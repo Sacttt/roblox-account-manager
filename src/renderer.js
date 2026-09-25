@@ -232,23 +232,33 @@ async function syncAvatarsInBackground(force = false) {
     (updates || []).forEach(u => {
       if (!u) return;
       const acc = accounts.find(a => a.id === u.id);
-      if (acc && u.avatarUrl) acc.avatarUrl = u.avatarUrl;
+      if (!acc) return;
+
+      // ALWAYS update cache if we got a new URL
+      if (u.avatarUrl) {
+        acc.avatarUrl = u.avatarUrl;
+      }
+
       const img = document.querySelector(`.card[data-id="${u.id}"] .avatar`);
       if (!img) return;
-      // Always update if the URL is different (including if it's a valid avatar URL now)
-      if (u.avatarUrl && img.src !== u.avatarUrl) {
+
+      // Use the avatarUrl if available, otherwise use cached
+      const finalUrl = u.avatarUrl || acc.avatarUrl;
+      if (!finalUrl) return;
+
+      // Always update if the URL is different
+      if (img.src !== finalUrl) {
         const probe = new Image();
         probe.onload = () => {
           img.classList.remove('loaded');
-          img.src = u.avatarUrl;
+          img.src = finalUrl;
           requestAnimationFrame(() => img.classList.add('loaded'));
         };
         probe.onerror = () => {
-          // On error, still set src (might be a network issue that resolves later)
-          img.src = u.avatarUrl;
+          img.src = finalUrl;
           img.classList.add('loaded');
         };
-        probe.src = u.avatarUrl;
+        probe.src = finalUrl;
       }
     });
   } catch (_) { /* keep showing cached images */ }
@@ -295,7 +305,6 @@ function render() {
 
   const titleMap = {
     dashboard: ['Dashboard', 'Select accounts to launch individually or join games together.'],
-    accounts: ['All Accounts', 'Complete roster of saved accounts with live presence and instant launch.'],
     favorites: ['Starred Favorites', 'Priority accounts pinned and bookmarked for rapid access.'],
     settings: ['Settings', 'Preferences, launch configurations, and local backup storage.'],
     themes: ['Themes', 'Appearance, seasonal identity, RGB lighting, and custom themes.']
@@ -1218,16 +1227,30 @@ function bindEvents() {
   // Save Preset Handler
   const savePresetBtn = $('#save-preset-btn');
   if (savePresetBtn) {
-    savePresetBtn.addEventListener('click', async () => {
+    savePresetBtn.addEventListener('click', async (e) => {
+      e.preventDefault();
       const gameInput = $('#game-target-input');
-      const target = (gameInput ? gameInput.value : '').trim();
+      if (!gameInput) {
+        toast('⚠ Game input field not found', 'error');
+        return;
+      }
+      let target = (gameInput.value || '').trim();
       if (!target) {
         toast('⚠ Enter a Place ID or Game Link first', 'error');
         return;
       }
+      // Extract Place ID from Roblox game link if needed
+      if (target.includes('roblox.com')) {
+        const match = target.match(/games\/(\d+)/);
+        if (match) {
+          target = match[1];
+        } else {
+          toast('⚠ Invalid Roblox game link format', 'error');
+          return;
+        }
+      }
       const name = prompt('Preset name:', 'My Game');
       if (!name || !name.trim()) return;
-
       try {
         const newPreset = {
           id: `p_${Date.now()}`,
@@ -1235,12 +1258,15 @@ function bindEvents() {
           target: target
         };
         presets.push(newPreset);
-        await window.api.savePresets(presets);
+        if (window.api && window.api.savePresets) {
+          await window.api.savePresets(presets);
+        }
         renderPresets();
-        toast(`✓ Saved: ${name.trim()}`, 'success');
+        gameInput.value = '';
+        toast(`✓ Saved preset: ${name.trim()}`, 'success');
       } catch (e) {
-        console.error('Preset save failed:', e);
-        toast('✗ Failed to save preset', 'error');
+        console.error('Save preset error:', e);
+        toast(`✗ Failed to save preset: ${e.message}`, 'error');
       }
     });
   }

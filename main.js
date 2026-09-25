@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, shell, Menu, session, protocol, safeStorage } = require('electron');
+const { app, BrowserWindow, ipcMain, shell, Menu, session, protocol, safeStorage, Tray } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const https = require('https');
@@ -498,6 +498,8 @@ function validateCookie(roblosecurity) {
 // ---------- window ----------
 
 let mainWindow;
+let tray = null;
+let isQuitting = false;
 function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1280,
@@ -518,6 +520,54 @@ function createWindow() {
     }
   });
   Menu.setApplicationMenu(null);
+
+  // Create system tray icon with context menu
+  if (!tray && fs.existsSync(ICON_PATH)) {
+    tray = new Tray(ICON_PATH);
+    const contextMenu = Menu.buildFromTemplate([
+      {
+        label: 'Open',
+        click: () => {
+          if (mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.show();
+            mainWindow.focus();
+          }
+        }
+      },
+      {
+        label: 'Hide',
+        click: () => {
+          if (mainWindow && !mainWindow.isDestroyed()) mainWindow.hide();
+        }
+      },
+      { type: 'separator' },
+      {
+        label: 'Exit',
+        click: () => {
+          isQuitting = true;
+          app.quit();
+        }
+      }
+    ]);
+    tray.setContextMenu(contextMenu);
+    tray.on('click', () => {
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        if (mainWindow.isVisible()) mainWindow.hide();
+        else {
+          mainWindow.show();
+          mainWindow.focus();
+        }
+      }
+    });
+  }
+
+  mainWindow.on('close', (e) => {
+    if (!isQuitting && process.platform === 'win32') {
+      e.preventDefault();
+      mainWindow.hide();
+    }
+  });
+
   mainWindow.once('ready-to-show', () => {
     if (mainWindow && !mainWindow.isDestroyed()) mainWindow.show();
   });
