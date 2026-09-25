@@ -1,12 +1,15 @@
-# Optional: build + publish the app on GitHub's servers instead of your PC.
-# Trigger it by pushing a version tag, e.g.:
-#     git tag v1.0.1
-#     git push origin v1.0.1
-# GitHub then builds the Windows installer and publishes the release for you.
-# No personal token needed — it uses the built-in GITHUB_TOKEN.
+# Build + publish the app on GitHub's servers (no local build, no personal token).
+#
+# Two ways to trigger:
+#  1) One click: Actions tab -> "Release" -> "Run workflow". Builds the installer
+#     and creates a DRAFT release for the version in package.json.
+#  2) Push a version tag, e.g.  git tag v1.0.1 && git push origin v1.0.1
+#
+# It uses the built-in GITHUB_TOKEN — nothing to configure.
 name: Release
 
 on:
+  workflow_dispatch:
   push:
     tags:
       - "v*"
