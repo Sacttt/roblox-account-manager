@@ -226,13 +226,16 @@ async function syncAvatarsInBackground(force = false) {
     (updates || []).forEach(u => {
       if (!u || !u.avatarUrl) return;
       const acc = accounts.find(a => a.id === u.id);
-      if (acc) acc.avatarUrl = u.avatarUrl; // keep model in sync for next render
-      if (!u.changed) return;
+      if (acc) acc.avatarUrl = u.avatarUrl;
       const img = document.querySelector(`.card[data-id="${u.id}"] .avatar`);
       if (!img) return;
-      const probe = new Image();
-      probe.onload = () => { img.classList.remove('loaded'); img.src = u.avatarUrl; requestAnimationFrame(() => img.classList.add('loaded')); };
-      probe.src = u.avatarUrl;
+      // Update DOM if avatar URL has changed or image doesn't have it yet
+      if (img.src !== u.avatarUrl) {
+        const probe = new Image();
+        probe.onload = () => { img.classList.remove('loaded'); img.src = u.avatarUrl; requestAnimationFrame(() => img.classList.add('loaded')); };
+        probe.onerror = () => { img.src = u.avatarUrl; img.classList.add('loaded'); }; // fallback: set src even on error
+        probe.src = u.avatarUrl;
+      }
     });
   } catch (_) { /* keep showing cached images */ }
 }
