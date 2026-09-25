@@ -432,83 +432,48 @@
   function renderPanel() {
     const host = document.getElementById('themes-panel');
     if (!host) return;
+
     const seasonList = seasonalThemes().map(t => {
       const active = getActiveSeasonal();
       const isActive = active && active.id === t.id;
-      const ms = daysUntil(t.calendar.start);
       const early = state.seasonal.earlyId === t.id;
       return `<div class="season-item">
         <div class="season-head"><span>${t.icon} ${t.name}</span>
-          ${isActive ? '<span class="season-badge live">Active now</span>' : `<span class="season-badge">Starts ${t.calendar.start}</span>`}</div>
+          ${isActive ? '<span class="season-badge live">Active</span>' : `<span class="season-badge">Coming ${t.calendar.start}</span>`}</div>
         <div class="season-actions">
-          <button class="btn ghost small" data-preview="${t.id}">Preview</button>
-          <button class="btn ghost small" data-apply="${t.id}">Apply</button>
-          ${!isActive ? `<button class="btn ${early ? 'primary' : 'ghost'} small" data-early="${t.id}">${early ? 'Early access on' : 'Activate early'}</button>` : ''}
+          <button class="btn primary small" data-apply="${t.id}">✓ Apply</button>
+          ${!isActive && state.seasonal.allowEarly ? `<button class="btn ghost small" data-early="${t.id}">${early ? '✓ Early' : 'Early'}</button>` : ''}
         </div>
-        ${(!isActive && early) ? `<div class="season-early">Early Access · <span id="season-countdown" data-start="${t.calendar.start}">${fmtCountdown(ms)}</span></div>` : ''}
       </div>`;
     }).join('');
 
-    const lib = (state.custom || []).map(t => `<div class="lib-item">
-      <span class="lib-name">${t.icon || '🎨'} ${t.name}</span>
-      <span class="lib-actions">
-        <button class="btn ghost small" data-apply="${t.id}">Apply</button>
-        <button class="btn ghost small" data-edit="${t.id}">Edit</button>
-        <button class="btn ghost small" data-dup="${t.id}">Duplicate</button>
-        <button class="btn ghost small" data-export="${t.id}">Export</button>
-        <button class="btn ghost danger small" data-del="${t.id}">Delete</button>
-      </span></div>`).join('') || '<p class="settings-desc">No custom themes yet. Create one below.</p>';
-
     host.innerHTML = `
-      <div class="settings-header"><h2>Themes &amp; Customization</h2><p>Give the app a living seasonal identity — or a completely custom look. Preview never changes your saved theme until you Apply.</p></div>
+      <div class="settings-header"><h2>Themes</h2><p>Pick a look for your app. Click Apply to change it now.</p></div>
 
-      <div class="theme-section"><h3>Built-in themes</h3><div class="theme-grid">${BUILTIN.map(themeCard).join('')}</div></div>
+      <div class="theme-section"><h3>Quick Pick</h3><div class="theme-grid">${BUILTIN.map(themeCard).join('')}</div></div>
 
-      <div class="theme-section"><h3>Seasonal</h3>
-        <label class="switch-row"><div class="switch-info"><strong>Automatic seasonal themes</strong><span>Switch automatically around each holiday.</span></div>
+      <div class="theme-section"><h3>Seasonal Themes</h3>
+        <label class="switch-row"><div class="switch-info"><strong>Auto-switch holidays</strong></div>
           <input type="checkbox" data-season="auto" ${state.seasonal.auto ? 'checked' : ''}/><span class="switch"></span></label>
-        <label class="switch-row"><div class="switch-info"><strong>Allow early activation</strong></div>
+        <label class="switch-row"><div class="switch-info"><strong>Allow early access</strong></div>
           <input type="checkbox" data-season="allowEarly" ${state.seasonal.allowEarly ? 'checked' : ''}/><span class="switch"></span></label>
-        <label class="switch-row"><div class="switch-info"><strong>Return to previous theme after season</strong></div>
-          <input type="checkbox" data-season="returnAfter" ${state.seasonal.returnAfter ? 'checked' : ''}/><span class="switch"></span></label>
-        <label class="switch-row"><div class="switch-info"><strong>Show countdown</strong></div>
-          <input type="checkbox" data-season="countdown" ${state.seasonal.countdown ? 'checked' : ''}/><span class="switch"></span></label>
         <div class="season-list">${seasonList}</div>
       </div>
 
-      <div class="theme-section"><h3>Lighting / RGB</h3>
-        <div class="select-wrapper"><select id="lighting-mode">${LIGHTING_MODES.map(m => `<option value="${m}" ${state.lighting.mode === m ? 'selected' : ''}>${m[0].toUpperCase() + m.slice(1)}</option>`).join('')}</select></div>
-        ${['speed', 'brightness', 'saturation', 'glow'].map(k => `<div class="slider-row"><label>${k[0].toUpperCase() + k.slice(1)}</label>
-          <input type="range" min="1" max="100" value="${state.lighting[k]}" data-light="${k}"/></div>`).join('')}
-        <p class="settings-desc">RGB stays subtle by design. Turn it on with the RGB toggle in Effects.</p>
-      </div>
-
-      <div class="theme-section"><h3>Avatar frames</h3>
-        <div class="frame-grid">${FRAMES.map(f => `<button class="frame-chip ${state.frame === f ? 'active' : ''}" data-frame="${f}">${f}</button>`).join('')}</div>
-      </div>
-
-      <div class="theme-section"><h3>Animated background</h3>
-        <div class="select-wrapper"><select id="bg-type">${BACKGROUNDS.map(b => `<option value="${b}" ${state.background.type === b ? 'selected' : ''}>${b}</option>`).join('')}</select></div>
-        <div class="select-wrapper"><select id="bg-perf">${PERF.map(p => `<option value="${p}" ${state.background.perf === p ? 'selected' : ''}>Performance: ${p}</option>`).join('')}</select></div>
-      </div>
-
       <div class="theme-section"><h3>Effects</h3>
-        ${toggleRow('seasonalTheme', 'Seasonal theme', state.effects.seasonalTheme)}
-        ${toggleRow('seasonalBackground', 'Seasonal background', state.effects.seasonalBackground)}
-        ${toggleRow('frames', 'Profile frames', state.effects.frames)}
-        ${toggleRow('particles', 'Particles', state.effects.particles)}
-        ${toggleRow('snowfall', 'Snowfall', state.effects.snowfall)}
-        ${toggleRow('animatedLights', 'Animated lights', state.effects.animatedLights)}
-        ${toggleRow('rgb', 'RGB', state.effects.rgb)}
-        ${toggleRow('sounds', 'Sounds', state.effects.sounds)}
+        <div class="effects-grid">
+          ${toggleRow('particles', 'Particles', state.effects.particles)}
+          ${toggleRow('snowfall', 'Snowfall', state.effects.snowfall)}
+          ${toggleRow('animatedLights', 'Animated lights', state.effects.animatedLights)}
+        </div>
       </div>
 
-      <div class="theme-section"><h3>My Themes</h3>
-        <div class="lib-list">${lib}</div>
-        <div class="settings-actions">
-          <button class="btn primary" id="theme-create-btn">+ Create Custom Theme</button>
-          <button class="btn ghost" id="theme-import-btn">Import Theme</button>
-        </div>
+      <div class="theme-section"><h3>Style Details</h3>
+        <label><strong>Avatar frames</strong></label>
+        <div class="frame-grid">${FRAMES.map(f => `<button class="frame-chip ${state.frame === f ? 'active' : ''}" data-frame="${f}">${f}</button>`).join('')}</div>
+
+        <label style="margin-top:16px;"><strong>Background</strong></label>
+        <div class="select-wrapper"><select id="bg-type">${BACKGROUNDS.map(b => `<option value="${b}" ${state.background.type === b ? 'selected' : ''}>${b}</option>`).join('')}</select></div>
       </div>`;
 
     bindPanel(host);

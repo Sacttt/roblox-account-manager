@@ -148,7 +148,13 @@ function renderPresets() {
 /* ---------------- Rendering & Filtering ---------------- */
 function getFiltered() {
   let list = [...accounts];
-  if (currentView === 'favorites') {
+
+  // Dashboard: Show favorites and recently used (not a full list)
+  if (currentView === 'dashboard') {
+    const fav = list.filter(a => a.favorite);
+    const recent = list.filter(a => !a.favorite).sort((a, b) => (b.lastLaunched || 0) - (a.lastLaunched || 0)).slice(0, 6);
+    list = [...fav, ...recent];
+  } else if (currentView === 'favorites') {
     list = list.filter(a => a.favorite);
   }
 
@@ -224,16 +230,24 @@ async function syncAvatarsInBackground(force = false) {
   try {
     const updates = await window.api.syncAvatars(null, force);
     (updates || []).forEach(u => {
-      if (!u || !u.avatarUrl) return;
+      if (!u) return;
       const acc = accounts.find(a => a.id === u.id);
-      if (acc) acc.avatarUrl = u.avatarUrl;
+      if (acc && u.avatarUrl) acc.avatarUrl = u.avatarUrl;
       const img = document.querySelector(`.card[data-id="${u.id}"] .avatar`);
       if (!img) return;
-      // Update DOM if avatar URL has changed or image doesn't have it yet
-      if (img.src !== u.avatarUrl) {
+      // Always update if the URL is different (including if it's a valid avatar URL now)
+      if (u.avatarUrl && img.src !== u.avatarUrl) {
         const probe = new Image();
-        probe.onload = () => { img.classList.remove('loaded'); img.src = u.avatarUrl; requestAnimationFrame(() => img.classList.add('loaded')); };
-        probe.onerror = () => { img.src = u.avatarUrl; img.classList.add('loaded'); }; // fallback: set src even on error
+        probe.onload = () => {
+          img.classList.remove('loaded');
+          img.src = u.avatarUrl;
+          requestAnimationFrame(() => img.classList.add('loaded'));
+        };
+        probe.onerror = () => {
+          // On error, still set src (might be a network issue that resolves later)
+          img.src = u.avatarUrl;
+          img.classList.add('loaded');
+        };
         probe.src = u.avatarUrl;
       }
     });
@@ -1205,23 +1219,29 @@ function bindEvents() {
   const savePresetBtn = $('#save-preset-btn');
   if (savePresetBtn) {
     savePresetBtn.addEventListener('click', async () => {
+      const gameInput = $('#game-target-input');
       const target = (gameInput ? gameInput.value : '').trim();
       if (!target) {
-        toast('Please enter a Place ID or Game Link first to save as preset.', 'error');
+        toast('⚠ Enter a Place ID or Game Link first', 'error');
         return;
       }
-      const name = prompt('Enter a name for this Game Preset:', 'Custom Game');
+      const name = prompt('Preset name:', 'My Game');
       if (!name || !name.trim()) return;
 
-      const newPreset = {
-        id: `p_${Date.now()}`,
-        name: name.trim(),
-        target: target
-      };
-      presets.push(newPreset);
-      await window.api.savePresets(presets);
-      renderPresets();
-      toast(`Saved preset "${name.trim()}"!`, 'success');
+      try {
+        const newPreset = {
+          id: `p_${Date.now()}`,
+          name: name.trim(),
+          target: target
+        };
+        presets.push(newPreset);
+        await window.api.savePresets(presets);
+        renderPresets();
+        toast(`✓ Saved: ${name.trim()}`, 'success');
+      } catch (e) {
+        console.error('Preset save failed:', e);
+        toast('✗ Failed to save preset', 'error');
+      }
     });
   }
 

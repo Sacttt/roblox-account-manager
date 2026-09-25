@@ -2142,7 +2142,7 @@ body.fx-decor[data-decor="winter"] .card::after { content: "\2603"; position: ab
 .card.no-decor::after { display: none !important; }
 
 /* ---------- Themes panel ---------- */
-.themes-panel { padding: 24px 28px 60px; max-width: 1100px; max-height: calc(100vh - 180px); overflow-y: auto; overflow-x: hidden; }
+.themes-panel { flex: 1; padding: 24px 28px 60px; overflow-y: auto; overflow-x: hidden; display: flex; flex-direction: column; }
 .theme-section { margin-top: 26px; }
 .theme-section > h3 { font-size: 14px; margin: 0 0 12px; color: var(--text); letter-spacing: .01em; }
 .theme-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }

@@ -732,6 +732,9 @@ ipcMain.handle('avatars:sync', async (_evt, { ids, force } = {}) => {
     if (!acc.userId) continue;
     const r = await syncAvatar(acc.userId, { force: !!force });
     if (r.url && r.url !== acc.avatarUrl) { acc.avatarUrl = r.url; anyChanged = true; }
+    // Always return the current or cached avatar URL, never null
+    const finalUrl = acc.avatarUrl || (r.url ? r.url : localAvatarUrl(acc.userId)) || null;
+    if (finalUrl && finalUrl !== acc.avatarUrl) { acc.avatarUrl = finalUrl; anyChanged = true; }
     updates.push({ id: acc.id, avatarUrl: acc.avatarUrl || null, changed: r.changed });
     await new Promise(res => setTimeout(res, 150)); // polite API cadence
   }
