@@ -61,6 +61,9 @@ async function init() {
     render();
     setupAutoRefresh();
     initUpdates();
+    // Centralized theme engine: apply saved/seasonal theme and build its panel.
+    window.__ramToast = toast;
+    if (window.RAMTheme) window.RAMTheme.init(settings);
     // Show cached avatars immediately (done in render), then check for changes.
     setTimeout(() => syncAvatarsInBackground(false), 1500);
     setInterval(() => syncAvatarsInBackground(false), 30 * 60 * 1000);
@@ -277,7 +280,8 @@ function render() {
     dashboard: ['Dashboard', 'Select accounts to launch individually or join games together.'],
     accounts: ['All Accounts', 'Complete roster of saved accounts with live presence and instant launch.'],
     favorites: ['Starred Favorites', 'Priority accounts pinned and bookmarked for rapid access.'],
-    settings: ['Settings', 'Preferences, launch configurations, and local backup storage.']
+    settings: ['Settings', 'Preferences, launch configurations, and local backup storage.'],
+    themes: ['Themes', 'Appearance, seasonal identity, RGB lighting, and custom themes.']
   };
 
   const viewTitleWrap = $('#view-title-wrap');
@@ -286,16 +290,21 @@ function render() {
   const emptyState = $('#empty-state');
   const floatingBatchBar = $('#floating-batch-bar');
   const settingsPanel = $('#settings-panel');
+  const themesPanel = $('#themes-panel');
 
-  if (currentView === 'settings') {
+  // Full-width panels (settings, themes) hide the account views.
+  if (currentView === 'settings' || currentView === 'themes') {
     if (viewTitleWrap) viewTitleWrap.hidden = true;
     if (gameLauncherPanel) gameLauncherPanel.hidden = true;
     if (accountGrid) accountGrid.hidden = true;
     if (emptyState) emptyState.hidden = true;
     if (floatingBatchBar) floatingBatchBar.hidden = true;
-    if (settingsPanel) settingsPanel.hidden = false;
+    if (settingsPanel) settingsPanel.hidden = currentView !== 'settings';
+    if (themesPanel) themesPanel.hidden = currentView !== 'themes';
+    if (currentView === 'themes' && window.RAMTheme) window.RAMTheme.renderPanel();
     return;
   }
+  if (themesPanel) themesPanel.hidden = true;
 
   if (settingsPanel) settingsPanel.hidden = true;
   if (viewTitleWrap) viewTitleWrap.hidden = false;
@@ -400,7 +409,7 @@ function cardHTML(a, i) {
   const isSelected = selectedAccountIds.has(a.id);
 
   return `
-  <div class="card ${isSelected ? 'selected' : ''}" data-id="${a.id}" style="animation-delay:${Math.min(i * 20, 200)}ms">
+  <div class="card ${isSelected ? 'selected' : ''}${a.noDecor ? ' no-decor' : ''}" data-id="${a.id}" style="animation-delay:${Math.min(i * 20, 200)}ms">
     <div class="card-icon-btns">
       <button type="button" class="card-select-checkbox" aria-label="${isSelected ? 'Deselect account' : 'Select for multi-launch'}" title="${isSelected ? 'Deselect account' : 'Select for multi-launch'}">${isSelected ? '✓' : ''}</button>
       <button type="button" class="fav-star ${a.favorite ? 'active' : ''}" aria-label="${a.favorite ? 'Remove favorite' : 'Add favorite'}" title="${a.favorite ? 'Remove favorite' : 'Add favorite'}">${a.favorite ? '★' : '☆'}</button>
@@ -1045,6 +1054,7 @@ function openContextMenu(x, y, id) {
     <button data-a="pin">${a.pinned ? '&#128204; Unpin from Top' : '&#128204; Pin to Top'}</button>
     <button data-a="fav">${a.favorite ? '&#9734; Remove Favorite' : '&#9733; Add Favorite'}</button>
     <button data-a="refresh">&#8635; Refresh Profile</button>
+    <button data-a="decor">${a.noDecor ? '&#10052; Enable Seasonal Decor' : '&#10052; Disable Seasonal Decor'}</button>
     <hr />
     <button data-a="remove" class="danger">&#128465; Remove Account</button>
   `;
@@ -1072,6 +1082,11 @@ function openContextMenu(x, y, id) {
       }
       if (act === 'fav') toggleFavorite(id);
       if (act === 'refresh') refreshAccount(id);
+      if (act === 'decor') {
+        const u = await window.api.updateAccount(id, { noDecor: !a.noDecor });
+        Object.assign(a, u);
+        render();
+      }
       if (act === 'remove') confirmRemove(id);
     };
   });
