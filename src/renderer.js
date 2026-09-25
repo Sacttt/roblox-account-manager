@@ -234,31 +234,23 @@ async function syncAvatarsInBackground(force = false) {
       const acc = accounts.find(a => a.id === u.id);
       if (!acc) return;
 
-      // ALWAYS update cache if we got a new URL
-      if (u.avatarUrl) {
-        acc.avatarUrl = u.avatarUrl;
-      }
+      // Store the fetched Roblox avatar (a base64 data URL) for later renders.
+      if (u.avatarUrl) acc.avatarUrl = u.avatarUrl;
+
+      // A user-set custom icon always wins — never overwrite it with the sync.
+      if (acc.customAvatar) return;
 
       const img = document.querySelector(`.card[data-id="${u.id}"] .avatar`);
       if (!img) return;
 
-      // Use the avatarUrl if available, otherwise use cached
       const finalUrl = u.avatarUrl || acc.avatarUrl;
       if (!finalUrl) return;
 
-      // Always update if the URL is different
+      // Data URLs load synchronously and reliably; swap in directly.
       if (img.src !== finalUrl) {
-        const probe = new Image();
-        probe.onload = () => {
-          img.classList.remove('loaded');
-          img.src = finalUrl;
-          requestAnimationFrame(() => img.classList.add('loaded'));
-        };
-        probe.onerror = () => {
-          img.src = finalUrl;
-          img.classList.add('loaded');
-        };
-        probe.src = finalUrl;
+        img.classList.remove('loaded');
+        img.src = finalUrl;
+        requestAnimationFrame(() => img.classList.add('loaded'));
       }
     });
   } catch (_) { /* keep showing cached images */ }
@@ -442,8 +434,8 @@ function cardHTML(a, i) {
     </div>
     <div class="card-top">
       <div class="avatar-wrap">
-        ${a.avatarUrl ? '<div class="avatar-skel"></div>' : ''}
-        <img class="avatar${a.avatarUrl ? '' : ' loaded'}" src="${a.avatarUrl || staticAvatarSrc(a)}"
+        ${(a.customAvatar || a.avatarUrl) ? '<div class="avatar-skel"></div>' : ''}
+        <img class="avatar${(a.customAvatar || a.avatarUrl) ? '' : ' loaded'}" src="${a.customAvatar || a.avatarUrl || staticAvatarSrc(a)}"
              data-userId="${a.userId}" data-letter="${staticAvatarSrc(a)}" alt="" draggable="false" />
         ${a.pinned ? '<div class="pin-badge" title="Pinned to top">📌</div>' : ''}
       </div>
@@ -539,8 +531,10 @@ function openDetail(id) {
       <button class="modal-close-btn" id="d-close-x">&times;</button>
     </div>
     <div class="detail-head">
-      <div class="detail-avatar-box">
-        <img class="detail-avatar" src="${staticAvatarSrc(a)}" alt="" />
+      <div class="detail-avatar-box" style="position:relative;">
+        <img class="detail-avatar" src="${a.customAvatar || a.avatarUrl || staticAvatarSrc(a)}" alt="" />
+        <button type="button" id="d-change-icon" title="Upload a custom icon"
+          style="position:absolute;bottom:-2px;right:-2px;width:28px;height:28px;border-radius:50%;border:2px solid #12141c;background:#f0b242;color:#1a1a1a;font-size:13px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;">📷</button>
         <div class="detail-presence-badge">
           <span class="presence-dot ${pres.dotClass}"></span>
           <span>${escapeHTML(pres.text.split('·')[0])}</span>
@@ -593,6 +587,10 @@ function openDetail(id) {
       <button class="btn ghost small" id="d-save-notes" style="margin-top: 12px; width: 100%;">
         Save Nickname &amp; Notes
       </button>
+      <div style="display:flex;gap:8px;margin-top:10px;">
+        <button class="btn ghost small" id="d-upload-icon" style="flex:1;">📷 Custom Icon</button>
+        ${a.customAvatar ? '<button class="btn ghost danger small" id="d-reset-icon" style="flex:1;">Reset to Roblox Avatar</button>' : ''}
+      </div>
     </div>
 
     <div class="detail-actions">
@@ -629,6 +627,13 @@ function openDetail(id) {
   if (dWebProfile) dWebProfile.onclick = () => window.api.openProfile(a.userId);
   if (dRefresh) dRefresh.onclick = () => refreshAccount(id, true);
   if (dRemove) dRemove.onclick = () => { closeModals(); confirmRemove(id); };
+
+  const dChangeIcon = $('#d-change-icon');
+  const dUploadIcon = $('#d-upload-icon');
+  const dResetIcon = $('#d-reset-icon');
+  if (dChangeIcon) dChangeIcon.onclick = () => pickCustomIcon(id);
+  if (dUploadIcon) dUploadIcon.onclick = () => pickCustomIcon(id);
+  if (dResetIcon) dResetIcon.onclick = () => resetCustomIcon(id);
 
   if (dSaveNotes) {
     dSaveNotes.onclick = async () => {
@@ -669,6 +674,62 @@ function openDetail(id) {
       openDetail(id);
       toast('Auto-login cookie removed.', 'info');
     };
+  }
+}
+
+// Let the user pick any image from disk as a custom account icon. Stored as a
+// base64 data URL on the account (persisted by the main process), so it always
+// renders and survives restarts. Custom icons take priority over Roblox avatars.
+function pickCustomIcon(id) {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'image/png,image/jpeg,image/jpg,image/gif,image/webp';
+  input.style.display = 'none';
+  input.onchange = () => {
+    const file = input.files && input.files[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) {
+      toast('⚠ Image too large (max 2MB)', 'error');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = async () => {
+      const dataUrl = String(reader.result || '');
+      if (!dataUrl.startsWith('data:image/')) {
+        toast('⚠ Unsupported image file', 'error');
+        return;
+      }
+      try {
+        await window.api.updateAccount(id, { customAvatar: dataUrl });
+        const acc = accounts.find(a => a.id === id);
+        if (acc) acc.customAvatar = dataUrl;
+        render();
+        openDetail(id);
+        toast('✓ Custom icon set', 'success');
+      } catch (e) {
+        console.error('Set custom icon failed:', e);
+        toast('✗ Failed to set icon', 'error');
+      }
+    };
+    reader.onerror = () => toast('✗ Could not read image', 'error');
+    reader.readAsDataURL(file);
+  };
+  document.body.appendChild(input);
+  input.click();
+  setTimeout(() => { try { document.body.removeChild(input); } catch (_) {} }, 1000);
+}
+
+async function resetCustomIcon(id) {
+  try {
+    await window.api.updateAccount(id, { customAvatar: null });
+    const acc = accounts.find(a => a.id === id);
+    if (acc) acc.customAvatar = null;
+    render();
+    openDetail(id);
+    toast('Reset to Roblox avatar', 'info');
+  } catch (e) {
+    console.error('Reset icon failed:', e);
+    toast('✗ Failed to reset icon', 'error');
   }
 }
 
@@ -1169,6 +1230,36 @@ function debounce(fn, ms) {
   };
 }
 
+// Electron does NOT implement window.prompt(), so this in-app modal replaces it.
+// Returns a Promise that resolves to the entered string, or null if cancelled.
+function askText(title, defaultValue = '') {
+  return new Promise((resolve) => {
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:99999;';
+    const box = document.createElement('div');
+    box.style.cssText = 'background:#12141c;border:1px solid #2a2f42;border-radius:14px;padding:20px;width:340px;max-width:90vw;box-shadow:0 20px 60px rgba(0,0,0,.5);';
+    box.innerHTML =
+      '<div style="font-size:15px;font-weight:700;color:#fff;margin-bottom:12px;">' + escapeHTML(title) + '</div>' +
+      '<input type="text" id="__ask-input" value="' + escapeHTML(defaultValue) + '" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid #2a2f42;background:#0b0d13;color:#fff;font-size:14px;box-sizing:border-box;" />' +
+      '<div style="display:flex;gap:8px;margin-top:14px;justify-content:flex-end;">' +
+        '<button id="__ask-cancel" style="padding:8px 14px;border-radius:8px;border:1px solid #2a2f42;background:transparent;color:#aaa;cursor:pointer;">Cancel</button>' +
+        '<button id="__ask-ok" style="padding:8px 14px;border-radius:8px;border:none;background:#f0b242;color:#1a1a1a;font-weight:700;cursor:pointer;">Save</button>' +
+      '</div>';
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
+    const input = box.querySelector('#__ask-input');
+    const cleanup = (val) => { try { document.body.removeChild(overlay); } catch (_) {} resolve(val); };
+    setTimeout(() => { input.focus(); input.select(); }, 30);
+    box.querySelector('#__ask-ok').onclick = () => cleanup(input.value);
+    box.querySelector('#__ask-cancel').onclick = () => cleanup(null);
+    overlay.onclick = (e) => { if (e.target === overlay) cleanup(null); };
+    input.onkeydown = (e) => {
+      if (e.key === 'Enter') cleanup(input.value);
+      else if (e.key === 'Escape') cleanup(null);
+    };
+  });
+}
+
 /* ---------------- Event Bindings ---------------- */
 function bindEvents() {
   if (eventsBound) return;
@@ -1249,7 +1340,7 @@ function bindEvents() {
           return;
         }
       }
-      const name = prompt('Preset name:', 'My Game');
+      const name = await askText('Name this preset', 'My Game');
       if (!name || !name.trim()) return;
       try {
         const newPreset = {

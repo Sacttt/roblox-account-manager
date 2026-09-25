@@ -135,6 +135,22 @@ function localAvatarUrl(userId) {
   return null;
 }
 
+// Read the cached headshot straight off disk and hand the renderer a
+// self-contained data: URL. This needs no custom protocol handler and no
+// network at render time, so the image ALWAYS shows if the file exists.
+function avatarDataUrl(userId) {
+  if (!userId) return null;
+  const file = path.join(CACHE_DIR, `${userId}.png`);
+  try {
+    const st = fs.statSync(file);
+    if (st.size > 80) {
+      const b64 = fs.readFileSync(file).toString('base64');
+      return `data:image/png;base64,${b64}`;
+    }
+  } catch (_) {}
+  return null;
+}
+
 // Remembers the last thumbnail URL we downloaded per user, so a background
 // sync can tell when the public avatar actually changed and skip re-downloads.
 const AVATAR_META_FILE = path.join(DATA_DIR, 'avatar-meta.json');
@@ -648,11 +664,9 @@ ipcMain.handle('window:close', () => {
 
 // ---------- IPC: accounts ----------
 ipcMain.handle('accounts:list', () => {
-  for (const acc of accounts) {
-    const cached = localAvatarUrl(acc.userId);
-    if (cached) acc.avatarUrl = cached;
-  }
-  return accounts.map(publicAccount);
+  // Serve avatars as base64 data URLs computed fresh from the cache files.
+  // We do NOT persist these onto the account objects (they'd bloat accounts.json).
+  return accounts.map(a => ({ ...publicAccount(a), avatarUrl: avatarDataUrl(a.userId) || null }));
 });
 
 ipcMain.handle('accounts:add', async (_evt, { username, nickname, notes }) => {
@@ -777,18 +791,15 @@ ipcMain.handle('avatars:sync', async (_evt, { ids, force } = {}) => {
     ? accounts.filter(a => ids.includes(a.id))
     : accounts;
   const updates = [];
-  let anyChanged = false;
   for (const acc of targets) {
     if (!acc.userId) continue;
-    const r = await syncAvatar(acc.userId, { force: !!force });
-    if (r.url && r.url !== acc.avatarUrl) { acc.avatarUrl = r.url; anyChanged = true; }
-    // Always return the current or cached avatar URL, never null
-    const finalUrl = acc.avatarUrl || (r.url ? r.url : localAvatarUrl(acc.userId)) || null;
-    if (finalUrl && finalUrl !== acc.avatarUrl) { acc.avatarUrl = finalUrl; anyChanged = true; }
-    updates.push({ id: acc.id, avatarUrl: acc.avatarUrl || null, changed: r.changed });
+    // Ensures the PNG is downloaded/refreshed into CACHE_DIR.
+    try { await syncAvatar(acc.userId, { force: !!force }); } catch (_) {}
+    // Hand back a data URL built from the just-cached file (never null unless
+    // the download truly failed and no prior cache exists).
+    updates.push({ id: acc.id, avatarUrl: avatarDataUrl(acc.userId) || null });
     await new Promise(res => setTimeout(res, 150)); // polite API cadence
   }
-  if (anyChanged) saveAccounts();
   return updates;
 });
 
