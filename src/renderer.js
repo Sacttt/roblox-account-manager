@@ -64,8 +64,8 @@ async function init() {
     // Centralized theme engine: apply saved/seasonal theme and build its panel.
     window.__ramToast = toast;
     if (window.RAMTheme) window.RAMTheme.init(settings);
-    // Show cached avatars immediately (done in render), then check for changes.
-    setTimeout(() => syncAvatarsInBackground(false), 1500);
+    // Fetch avatars immediately on startup, then check for changes periodically.
+    syncAvatarsInBackground(false);
     setInterval(() => syncAvatarsInBackground(false), 30 * 60 * 1000);
   } catch (e) {
     console.error('Failed to render app', e);
@@ -418,7 +418,7 @@ function cardHTML(a, i) {
       <div class="avatar-wrap">
         ${a.avatarUrl ? '<div class="avatar-skel"></div>' : ''}
         <img class="avatar${a.avatarUrl ? '' : ' loaded'}" src="${a.avatarUrl || staticAvatarSrc(a)}"
-             data-letter="${staticAvatarSrc(a)}" alt="" draggable="false" />
+             data-userId="${a.userId}" data-letter="${staticAvatarSrc(a)}" alt="" draggable="false" />
         ${a.pinned ? '<div class="pin-badge" title="Pinned to top">📌</div>' : ''}
       </div>
       <div class="card-names">
