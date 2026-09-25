@@ -126,8 +126,51 @@ function parseGameTarget(target) {
 function localAvatarUrl(userId) {
   if (!userId) return null;
   const file = path.join(CACHE_DIR, `${userId}.png`);
-  if (fs.existsSync(file) && fs.statSync(file).size > 80) return `ramavatar://${userId}`;
+  try {
+    const st = fs.statSync(file);
+    // ?v=<mtime> busts the renderer's image cache when the file is replaced
+    // (e.g. the player changed their Roblox outfit), so the new image shows.
+    if (st.size > 80) return `ramavatar://${userId}?v=${Math.floor(st.mtimeMs)}`;
+  } catch (_) {}
   return null;
+}
+
+// Remembers the last thumbnail URL we downloaded per user, so a background
+// sync can tell when the public avatar actually changed and skip re-downloads.
+const AVATAR_META_FILE = path.join(DATA_DIR, 'avatar-meta.json');
+let avatarMeta = readJSON(AVATAR_META_FILE, {});
+function saveAvatarMeta() { try { writeJSON(AVATAR_META_FILE, avatarMeta); } catch (_) {} }
+
+// Square, non-circular headshot from Roblox's official thumbnail service.
+async function fetchThumbnailUrl(userId) {
+  const thumb = await httpsJSON({
+    hostname: 'thumbnails.roblox.com',
+    path: `/v1/users/avatar-headshot?userIds=${userId}&size=150x150&format=Png&isCircular=false`,
+    method: 'GET'
+  });
+  return (thumb.data && thumb.data[0] && thumb.data[0].imageUrl) || null;
+}
+
+// Fetch the current public thumbnail; download only if missing, forced, or the
+// image changed. Returns { changed, url }. On any failure the cached file (if
+// any) is left untouched so the card keeps showing it.
+async function syncAvatar(userId, { force = false } = {}) {
+  let remote = null;
+  try { remote = await fetchThumbnailUrl(userId); } catch (_) {}
+  const haveFile = fs.existsSync(path.join(CACHE_DIR, `${userId}.png`));
+  const changedRemote = remote && remote !== avatarMeta[userId];
+  if (remote && (force || !haveFile || changedRemote)) {
+    try {
+      const buf = await httpsGetBuffer(remote);
+      if (buf && buf.length > 80) {
+        fs.writeFileSync(path.join(CACHE_DIR, `${userId}.png`), buf);
+        avatarMeta[userId] = remote;
+        saveAvatarMeta();
+        return { changed: true, url: localAvatarUrl(userId) };
+      }
+    } catch (_) {}
+  }
+  return { changed: false, url: localAvatarUrl(userId) };
 }
 
 function httpsGetBuffer(url, redirects = 0) {
@@ -391,7 +434,7 @@ async function getUserProfile(userId) {
     try {
       const thumb = await httpsJSON({
         hostname: 'thumbnails.roblox.com',
-        path: `/v1/users/avatar-headshot?userIds=${userId}&size=150x150&format=Png&isCircular=true`,
+        path: `/v1/users/avatar-headshot?userIds=${userId}&size=150x150&format=Png&isCircular=false`,
         method: 'GET'
       });
       const remote = (thumb.data && thumb.data[0] && thumb.data[0].imageUrl) || null;
@@ -495,7 +538,8 @@ app.whenReady().then(() => {
 
   protocol.registerFileProtocol('ramavatar', (request, callback) => {
     try {
-      const id = decodeURIComponent(request.url.replace(/^ramavatar:\/\//i, '').replace(/\/$/, ''));
+      const raw = request.url.replace(/^ramavatar:\/\//i, '').split('?')[0].replace(/\/$/, '');
+      const id = decodeURIComponent(raw);
       const file = path.join(CACHE_DIR, `${id}.png`);
       if (fs.existsSync(file)) callback({ path: file });
       else callback({ error: -6 });
@@ -516,7 +560,7 @@ app.whenReady().then(() => {
       try {
         const thumb = await httpsJSON({
           hostname: 'thumbnails.roblox.com',
-          path: `/v1/users/avatar-headshot?userIds=${acc.userId}&size=150x150&format=Png&isCircular=true`,
+          path: `/v1/users/avatar-headshot?userIds=${acc.userId}&size=150x150&format=Png&isCircular=false`,
           method: 'GET'
         });
         const remote = (thumb.data && thumb.data[0] && thumb.data[0].imageUrl) || null;
@@ -672,6 +716,27 @@ ipcMain.handle('accounts:openProfile', async (_evt, userId) => {
   if (!userId) return false;
   await shell.openExternal(`https://www.roblox.com/users/${userId}/profile`);
   return true;
+});
+
+// ---------- IPC: avatar thumbnails (public headshots) ----------
+// Background/refresh sync of the public Roblox avatar. Downloads only when the
+// image is missing or has changed; returns which cards to update. Never touches
+// cookies or any other account data.
+ipcMain.handle('avatars:sync', async (_evt, { ids, force } = {}) => {
+  const targets = (Array.isArray(ids) && ids.length)
+    ? accounts.filter(a => ids.includes(a.id))
+    : accounts;
+  const updates = [];
+  let anyChanged = false;
+  for (const acc of targets) {
+    if (!acc.userId) continue;
+    const r = await syncAvatar(acc.userId, { force: !!force });
+    if (r.url && r.url !== acc.avatarUrl) { acc.avatarUrl = r.url; anyChanged = true; }
+    updates.push({ id: acc.id, avatarUrl: acc.avatarUrl || null, changed: r.changed });
+    await new Promise(res => setTimeout(res, 150)); // polite API cadence
+  }
+  if (anyChanged) saveAccounts();
+  return updates;
 });
 
 /*

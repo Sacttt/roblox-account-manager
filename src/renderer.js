@@ -61,6 +61,9 @@ async function init() {
     render();
     setupAutoRefresh();
     initUpdates();
+    // Show cached avatars immediately (done in render), then check for changes.
+    setTimeout(() => syncAvatarsInBackground(false), 1500);
+    setInterval(() => syncAvatarsInBackground(false), 30 * 60 * 1000);
   } catch (e) {
     console.error('Failed to render app', e);
   }
@@ -187,9 +190,48 @@ function letterAvatar(name) {
 }
 
 function staticAvatarSrc(a) {
-  // Keep cards deterministic: a local monogram never spins, waits on a CDN,
-  // or breaks when an image protocol is unavailable in a packaged build.
+  // Neutral placeholder: a local monogram shown only until (or unless) the
+  // real Roblox headshot is available. Never spins or waits on a CDN.
   return letterAvatar(a && (a.displayName || a.username));
+}
+
+// Crossfade each real avatar in once it has loaded (skeleton shows meanwhile);
+// fall back to the letter placeholder if the image fails. The image itself is a
+// plain static PNG and never animates after it appears.
+function hydrateAvatars() {
+  document.querySelectorAll('.avatar-wrap .avatar').forEach(img => {
+    if (img.classList.contains('loaded')) return; // letter placeholder, nothing to load
+    const skel = img.parentElement.querySelector('.avatar-skel');
+    const done = () => { img.classList.add('loaded'); if (skel) skel.remove(); };
+    if (img.complete && img.naturalWidth > 0) { done(); return; }
+    img.addEventListener('load', done, { once: true });
+    img.addEventListener('error', () => {
+      const letter = img.getAttribute('data-letter');
+      if (letter && img.src !== letter) img.src = letter;
+      done();
+    }, { once: true });
+  });
+}
+
+// Background pass: ask the main process to re-check each account's public
+// thumbnail and swap in any that changed (new outfit), without re-rendering the
+// rest of the card. Cheap, throttled in main, and safe to fail silently.
+async function syncAvatarsInBackground(force = false) {
+  if (!window.api || !window.api.syncAvatars) return;
+  try {
+    const updates = await window.api.syncAvatars(null, force);
+    (updates || []).forEach(u => {
+      if (!u || !u.avatarUrl) return;
+      const acc = accounts.find(a => a.id === u.id);
+      if (acc) acc.avatarUrl = u.avatarUrl; // keep model in sync for next render
+      if (!u.changed) return;
+      const img = document.querySelector(`.card[data-id="${u.id}"] .avatar`);
+      if (!img) return;
+      const probe = new Image();
+      probe.onload = () => { img.classList.remove('loaded'); img.src = u.avatarUrl; requestAnimationFrame(() => img.classList.add('loaded')); };
+      probe.src = u.avatarUrl;
+    });
+  } catch (_) { /* keep showing cached images */ }
 }
 
 function getPresenceInfo(account) {
@@ -299,6 +341,7 @@ function render() {
   if (accountGrid) {
     accountGrid.hidden = false;
     accountGrid.innerHTML = list.map((a, i) => cardHTML(a, i)).join('');
+    hydrateAvatars();
 
     // Attach card event listeners
     accountGrid.querySelectorAll('.card').forEach(el => {
@@ -364,7 +407,9 @@ function cardHTML(a, i) {
     </div>
     <div class="card-top">
       <div class="avatar-wrap">
-        <img class="avatar" src="${staticAvatarSrc(a)}" alt="" draggable="false" />
+        ${a.avatarUrl ? '<div class="avatar-skel"></div>' : ''}
+        <img class="avatar${a.avatarUrl ? '' : ' loaded'}" src="${a.avatarUrl || staticAvatarSrc(a)}"
+             data-letter="${staticAvatarSrc(a)}" alt="" draggable="false" />
         ${a.pinned ? '<div class="pin-badge" title="Pinned to top">📌</div>' : ''}
       </div>
       <div class="card-names">

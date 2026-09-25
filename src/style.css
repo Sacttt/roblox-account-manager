@@ -724,6 +724,26 @@ body {
   border: 1px solid var(--border);
   display: block;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  opacity: 0;
+  transition: opacity 0.35s ease;
+}
+/* Real headshot fades in once loaded; the letter placeholder is 'loaded' from
+   the start so it shows instantly. The image is static after it appears. */
+.avatar.loaded { opacity: 1; }
+
+/* Skeleton shown under the image while the headshot loads. */
+.avatar-skel {
+  position: absolute;
+  inset: 0;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: linear-gradient(100deg, #181b24 30%, #232838 50%, #181b24 70%);
+  background-size: 200% 100%;
+  animation: shimmer 1.1s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .avatar { transition: none; }
+  .avatar-skel { animation: none; }
 }
 
 @keyframes shimmer {

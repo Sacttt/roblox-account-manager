@@ -11,6 +11,7 @@ contextBridge.exposeInMainWorld('api', {
   removeAccount:      (id)                  => ipcRenderer.invoke('accounts:remove', id),
   refreshAccount:     (id)                  => ipcRenderer.invoke('accounts:refresh', id),
   refreshAllAccounts: ()                    => ipcRenderer.invoke('accounts:refreshAll'),
+  syncAvatars:        (ids, force)          => ipcRenderer.invoke('avatars:sync', { ids, force }),
   launchAccount:      (id, targetUrl)       => ipcRenderer.invoke('accounts:launch', { id, targetUrl }),
   launchMany:         (ids, targetUrl)      => ipcRenderer.invoke('accounts:launchMany', { ids, targetUrl }),
   onLaunchProgress:   (cb)                  => ipcRenderer.on('launch:progress', (_e, data) => cb(data)),
