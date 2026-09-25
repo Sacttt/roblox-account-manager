@@ -25,7 +25,12 @@
       "multiroblox.js",
       "updater.js",
       "preload.js",
-      "src/**/*"
+      "src/**/*",
+      "!**/*.bat",
+      "!**/generate_icon.js",
+      "!**/*.md",
+      "!**/dev-app-update.yml",
+      "!**/.github"
     ],
     "win": {
       "target": "nsis",
