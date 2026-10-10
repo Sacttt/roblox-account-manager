@@ -364,7 +364,7 @@ code, .mono { font-family: var(--mono); font-size: 12px; }
 .launch-bar .parsed { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); font-size: 11.5px; pointer-events: none; }
 
 .toolbar { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
-.toolbar .search { width: 280px; }
+.toolbar .search { flex: 1 1 260px; max-width: 420px; }
 .filter-chips { display: flex; gap: 4px; flex-wrap: wrap; }
 .filter-chip {
   height: 28px; padding: 0 10px; border-radius: 20px;
@@ -493,7 +493,7 @@ body.density-compact .account-grid { grid-template-columns: repeat(auto-fill, mi
   padding: 7px 7px 7px 14px; border-radius: 14px;
   background: var(--surface-2); border: 1px solid var(--border-strong); box-shadow: var(--shadow-lg);
   z-index: 30; animation: rise 200ms var(--ease);
-  max-width: calc(100% - 32px); flex-wrap: wrap;
+  width: max-content; max-width: calc(100% - 32px); flex-wrap: wrap; justify-content: center;
 }
 .bulk-bar .count { font-weight: 650; margin-right: 6px; white-space: nowrap; }
 .bulk-bar .sep { width: 1px; height: 20px; background: var(--border-strong); margin: 0 4px; }
@@ -670,6 +670,8 @@ details.howto ol { margin: 0; padding: 10px 12px 12px 30px; color: var(--text-2)
 .preset-row .title { font-weight: 600; }
 .preset-row .sub { font-size: 12px; color: var(--text-3); }
 .preset-row.current { background: var(--accent-soft); }
+.card .preset-row:first-child { border-top-left-radius: calc(var(--r-lg) - 1px); border-top-right-radius: calc(var(--r-lg) - 1px); }
+.card .preset-row:last-child { border-bottom-left-radius: calc(var(--r-lg) - 1px); border-bottom-right-radius: calc(var(--r-lg) - 1px); }
 
 /* ---------------------------------------------------------------- skeletons & misc */
 .skeleton { background: linear-gradient(90deg, var(--surface-2), var(--surface-3), var(--surface-2)); background-size: 200% 100%; animation: shimmer 1.2s infinite; border-radius: var(--r); }

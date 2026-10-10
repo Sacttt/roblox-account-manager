@@ -8,7 +8,7 @@ import { launchBarHtml, bindLaunchBar } from '../components/launch-bar.js';
 import { openAddAccount } from '../components/add-account.js';
 import {
   openDetail, launchAccounts, toggleFavorite, accountMenu, toggleSelect, clearSelection, bulkMenu,
-  removeAccounts, refreshAccounts, assignGroup, addTag,
+  removeAccounts, refreshAccounts, assignGroup, addTag, reloginAccount,
 } from '../actions.js';
 
 export function mount(root) {
@@ -24,7 +24,6 @@ export function mount(root) {
     <div class="toolbar">
       <div class="input-wrap search">${icon('search')}<input class="input sm" data-search placeholder="Search name, user, notes, tags…" value="${esc(state.filters.query)}" aria-label="Search accounts">
         <span class="trail"><kbd>Ctrl F</kbd></span></div>
-      <div class="filter-chips" data-chips></div>
       <span class="spacer"></span>
       <select class="select sm" data-group style="width:150px" aria-label="Filter by group"></select>
       <select class="select sm" data-tag style="width:130px" aria-label="Filter by tag"></select>
@@ -37,6 +36,7 @@ export function mount(root) {
         <button data-view-mode="list" title="Table" aria-label="Table view">${icon('list', 'sm')}</button>
       </div>
     </div>
+    <div class="toolbar"><div class="filter-chips" data-chips></div></div>
     <div data-list></div>
   </div>
   <div class="bulk-bar" data-bulk hidden></div>`;
@@ -94,6 +94,7 @@ export function mount(root) {
       case 'select': e.stopPropagation(); toggleSelect(id, { range: e.shiftKey, visibleIds }); break;
       case 'favorite': e.stopPropagation(); toggleFavorite(id); break;
       case 'launch': e.stopPropagation(); launchAccounts(state.selection.has(id) && state.selection.size > 1 ? [...state.selection] : [id]); break;
+      case 'relogin': e.stopPropagation(); reloginAccount(id); break;
       case 'menu': e.stopPropagation(); accountMenu(el, id); break;
       case 'select-all': toggleAll(); break;
       case 'clear-filters': state.filters = { query: '', chip: 'all', group: '', tag: '' }; search.value = ''; notify('filters'); break;

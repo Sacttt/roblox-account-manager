@@ -202,8 +202,12 @@ document.addEventListener('keydown', async (e) => {
   if (mod && key === 'r') { e.preventDefault(); refreshAccounts(null, { full: true }); return; }
   if (mod && key === 'f') {
     e.preventDefault();
-    if (state.view !== 'accounts') navigate('accounts');
-    requestAnimationFrame(() => mounted.ctl && mounted.ctl.focusSearch && mounted.ctl.focusSearch());
+    // Focus right away when the box is on screen so fast typing isn't lost.
+    if (state.view === 'accounts' && mounted.name === 'accounts' && mounted.ctl.focusSearch) mounted.ctl.focusSearch();
+    else {
+      navigate('accounts');
+      requestAnimationFrame(() => requestAnimationFrame(() => mounted.ctl && mounted.ctl.focusSearch && mounted.ctl.focusSearch()));
+    }
     return;
   }
   if (mod && /^[1-5]$/.test(e.key)) { e.preventDefault(); navigate(ORDER[Number(e.key) - 1]); return; }

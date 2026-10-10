@@ -27,7 +27,7 @@ export function openAddAccount({ method = 'web' } = {}) {
         <button role="tab" data-method="cookie">${icon('key')}Paste a cookie</button>
       </div>
       <div data-pane="web"></div>
-      <div data-pane="cookie" hidden>
+      <div data-pane="cookie" class="stack" style="gap:12px" hidden>
         <div class="note warn">${icon('alert')}<div><strong>Treat this cookie like a password.</strong> Anyone who has it can sign in as you. Only paste cookies for your own accounts, and never share them.</div></div>
         <div class="field">
           <div class="row"><label for="add-cookie">.ROBLOSECURITY cookie</label><span class="spacer"></span>

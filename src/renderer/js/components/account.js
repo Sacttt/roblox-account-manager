@@ -39,8 +39,12 @@ export function chipsHtml(a, max = 3) {
 }
 
 function launchButton(a, size = 'sm') {
+  if (a.session.status === 'expired' || a.session.status === 'none') {
+    return `<button class="btn ${size}" data-action="relogin" data-id="${esc(a.id)}" title="Sign in to this account again so it can be launched">
+      ${icon('logIn', 'sm')}${a.session.status === 'none' ? 'Add sign-in' : 'Sign in again'}</button>`;
+  }
   const launching = state.launchingIds.has(a.id);
-  const disabled = a.session.status === 'none';
+  const disabled = false;
   return `<button class="btn primary ${size}" data-action="launch" data-id="${esc(a.id)}" ${disabled || launching ? 'disabled' : ''}
     title="${disabled ? 'Add a sign-in to launch this account' : 'Open Roblox signed in as this account'}">
     ${launching ? '<span class="spinner"></span>Launching' : `${icon('play', 'sm')}Launch`}</button>`;

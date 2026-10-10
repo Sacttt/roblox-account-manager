@@ -5,7 +5,7 @@ import { icon } from '../icons.js';
 import { avatarHtml, presenceHtml } from './account.js';
 import { toast } from '../ui/toast.js';
 import { confirmDialog, openModal } from '../ui/modal.js';
-import { launchAccounts, removeAccounts, refreshAccounts, verifySession, copyText, accountMenu } from '../actions.js';
+import { launchAccounts, removeAccounts, refreshAccounts, verifySession, copyText, accountMenu, reloginAccount } from '../actions.js';
 
 let mounted = null; // { id, el, backdrop, draft, dirty }
 
@@ -216,7 +216,7 @@ function renderDynamic(a) {
         ${s.status !== 'none' ? `<button class="btn sm" data-d="verify">${icon('shieldCheck', 'sm')}Check now</button>` : ''}
         <button class="btn sm ${s.status === 'expired' || s.status === 'none' ? 'primary' : ''}" data-d="relogin">${icon('logIn', 'sm')}${s.status === 'none' ? 'Sign in' : 'Sign in again'}</button>
         <button class="btn sm ghost" data-d="paste">${icon('key', 'sm')}Paste cookie</button>
-        ${s.status !== 'none' ? `<button class="btn sm ghost" data-d="clear-session" style="margin-left:auto;color:var(--red)">Remove sign-in</button>` : ''}
+        ${s.status !== 'none' ? `<button class="btn sm ghost" data-d="clear-session" style="color:var(--red)">Remove</button>` : ''}
       </div></div>`;
 
   q('[data-details]').innerHTML = `
@@ -246,7 +246,7 @@ async function onClick(e) {
     case 'more': accountMenu(b, id); break;
     case 'verify': b.disabled = true; await verifySession(id); b.disabled = false; break;
     case 'copy-id': copyText(a.userId, 'User ID copied'); break;
-    case 'relogin': relogin(); break;
+    case 'relogin': reloginAccount(id); break;
     case 'paste': pasteCookie(a); break;
     case 'clear-session': {
       const ok = await confirmDialog({ title: 'Remove saved sign-in?', message: `The encrypted sign-in for @${a.username} will be deleted from this PC. You'll need to sign in again to launch it. Your Roblox account is not affected.`, confirmLabel: 'Remove sign-in', danger: true });
@@ -259,19 +259,6 @@ async function onClick(e) {
   }
 }
 
-async function relogin() {
-  toast({ type: 'info', message: 'Sign in to this account in the Roblox window.' });
-  try {
-    const r = await call('accounts:web-login', {});
-    if (r && r.account && mounted && r.account.id !== mounted.id) {
-      toast({ type: 'warning', title: 'Different account', message: `You signed in as @${r.account.username}, so that account was ${r.isNew ? 'added' : 'updated'} instead.` });
-    } else if (r && r.account) {
-      toast({ type: 'success', message: 'Sign-in updated.' });
-    }
-  } catch (e) {
-    toast({ type: 'error', message: errorMessage(e) });
-  }
-}
 
 function pasteCookie(a) {
   const m = openModal({

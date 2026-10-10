@@ -86,13 +86,13 @@ export function mount(root) {
     <section class="card">
       ${setting('Multi Roblox', 'Lets several Roblox windows run at the same time. Turn it on while Roblox is closed. Roblox may treat multiple clients as unusual — use at your own risk.',
         `<label class="switch"><input type="checkbox" data-act-change="multi" ${s.multiRoblox ? 'checked' : ''}><span></span></label>`)}
-      ${setting('Launcher', 'What opens Roblox. Automatic uses Bloxstrap or Fishstrap when installed, otherwise the official Roblox launcher.',
+      ${setting('Launcher', 'What opens Roblox. Automatic uses whichever launcher Windows has registered for Roblox (official, Bloxstrap or Fishstrap).',
         `<select class="select sm" data-setting="launcher">
           ${[['auto', 'Automatic'], ['default', 'Official Roblox'], ['bloxstrap', 'Bloxstrap'], ['fishstrap', 'Fishstrap'], ['client', 'RobloxPlayerBeta.exe directly']].map(([v, l]) => `<option value="${v}" ${s.launcher === v ? 'selected' : ''}>${l}</option>`).join('')}
         </select>`)}
       ${setting('Delay between accounts', 'When launching several accounts, the app waits for each Roblox window to appear, then this long before the next one.',
         `<select class="select sm" data-setting="launchDelaySec">${[3, 4, 6, 8, 10, 15, 20, 30].map((n) => `<option value="${n}" ${s.launchDelaySec === n ? 'selected' : ''}>${n} seconds</option>`).join('')}</select>`)}
-      ${setting('Close all Roblox windows', 'Force-closes every running Roblox client. Useful when Roblox is stuck in the background.', `<button class="btn sm danger-ghost" data-act="close-roblox">${icon('x', 'sm')}Close Roblox</button>`)}
+      ${setting('Close all Roblox windows', 'Closes every running Roblox client — politely first, then forcefully if needed. Useful when Roblox is stuck in the background.', `<button class="btn sm danger-ghost" data-act="close-roblox">${icon('x', 'sm')}Close Roblox</button>`)}
     </section>`;
   }
 

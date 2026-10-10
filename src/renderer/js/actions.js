@@ -132,6 +132,23 @@ async function handleLaunchPreflightError(e, ids) {
   toast({ type: 'error', title: 'Launch failed', message: errorMessage(e), action });
 }
 
+/** Opens Roblox's sign-in window to refresh a saved sign-in. */
+export async function reloginAccount(id) {
+  const a = state.accounts.get(id);
+  toast({ type: 'info', message: a ? `Sign in as @${a.username} in the Roblox window.` : 'Sign in in the Roblox window.' });
+  try {
+    const r = await call('accounts:web-login', {});
+    if (!r || r.canceled) return;
+    if (r.account && r.account.id !== id) {
+      toast({ type: 'warning', title: 'Different account', message: `You signed in as @${r.account.username}, so that account was ${r.isNew ? 'added' : 'updated'} instead.` });
+    } else {
+      toast({ type: 'success', message: 'Sign-in updated. This account can be launched again.' });
+    }
+  } catch (e) {
+    toast({ type: 'error', message: errorMessage(e) });
+  }
+}
+
 export async function toggleFavorite(id) {
   const a = state.accounts.get(id);
   if (!a) return;
