@@ -113,6 +113,7 @@ export function startBubbles({ onPop } = {}) {
   }
 
   let running = true;
+  let rafId = 0;
   let last = performance.now();
   function loop(now) {
     if (!running) return;
@@ -131,16 +132,18 @@ export function startBubbles({ onPop } = {}) {
       if (b.y < -b.r - 20) Object.assign(b, make(false));
       drawBubble(bctx, b.x, b.y, b.r, b.color, b.alpha);
     }
-    requestAnimationFrame(loop);
+    rafId = requestAnimationFrame(loop);
   }
 
   if (reduced) {
     for (const b of bubbles) drawBubble(bctx, b.x, b.y, b.r, b.color, b.alpha * 0.8);
   } else {
-    requestAnimationFrame(loop);
+    rafId = requestAnimationFrame(loop);
     document.addEventListener('visibilitychange', () => {
+      // Drop the frame queued before hiding so only one loop ever runs.
+      cancelAnimationFrame(rafId);
       running = !document.hidden;
-      if (running) { last = performance.now(); requestAnimationFrame(loop); }
+      if (running) { last = performance.now(); rafId = requestAnimationFrame(loop); }
     });
   }
 

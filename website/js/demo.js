@@ -63,7 +63,9 @@ export function initDemo({ play, burst }) {
     });
     count.textContent = `${selected.size} selected`;
     launch.disabled = busy || selected.size === 0;
-    all.textContent = cards.filter((c) => !c.hidden).every((c) => selected.has(Number(c.dataset.index))) ? 'Clear' : 'Select all';
+    const visible = cards.filter((c) => !c.hidden);
+    all.disabled = busy || !visible.length;
+    all.textContent = visible.length && visible.every((c) => selected.has(Number(c.dataset.index))) ? 'Clear' : 'Select all';
   }
 
   grid.addEventListener('click', (e) => {
