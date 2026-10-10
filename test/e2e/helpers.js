@@ -7,7 +7,8 @@ const { _electron: electron } = require('playwright-core');
 const { createMockRoblox } = require('../support/mock-roblox');
 
 const APP_DIR = path.join(__dirname, '..', '..');
-const needsNoSandbox = process.platform === 'linux' && (process.getuid && process.getuid() === 0);
+// Test-only: CI Linux runners restrict the Chromium sandbox's user namespaces.
+const needsNoSandbox = process.platform === 'linux';
 
 function tempDir(name) {
   return fs.mkdtempSync(path.join(os.tmpdir(), `ram-e2e-${name}-`));

@@ -1,6 +1,7 @@
 @echo off
 setlocal
 title Roblox Account Manager - Publish Release
+cd /d "%~dp0"
 
 echo ============================================
 echo  Roblox Account Manager - Publish Release
@@ -24,19 +25,28 @@ if "%GH_TOKEN%"=="" (
   exit /b 1
 )
 
-echo [1/2] Installing dependencies...
-call npm install
-if errorlevel 1 ( echo [ERROR] npm install failed. & pause & exit /b 1 )
+set CSC_IDENTITY_AUTO_DISCOVERY=false
+
+echo [1/3] Installing dependencies...
+call npm ci
+if errorlevel 1 ( echo [ERROR] npm ci failed. & pause & exit /b 1 )
 
 echo.
-echo [2/2] Building and publishing to GitHub Releases...
+echo [2/3] Running checks...
+call npm run -s lint
+if errorlevel 1 ( echo [ERROR] Lint failed. & pause & exit /b 1 )
+call npm run -s test:unit
+if errorlevel 1 ( echo [ERROR] Unit tests failed. & pause & exit /b 1 )
+
+echo.
+echo [3/3] Building and publishing to GitHub Releases...
 call npm run release
 if errorlevel 1 ( echo [ERROR] Publish failed. See messages above. & pause & exit /b 1 )
 
 echo.
-echo Done. A DRAFT release was created on GitHub with the installer, latest.yml,
-echo and blockmap. Finish it here, add your notes, and click Publish:
+echo Done. A DRAFT release was created on GitHub with the installer, the portable
+echo exe, latest.yml and the blockmap. Add your notes there and click Publish:
 echo     https://github.com/Sacttt/roblox-account-manager/releases
-echo Installed apps will detect it within a few hours (or on next launch).
+echo Installed copies pick it up within a few hours (or on next launch).
 echo.
 pause

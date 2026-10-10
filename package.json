@@ -1,7 +1,7 @@
 {
   "name": "roblox-account-manager",
   "version": "2.0.0",
-  "description": "Free, open-source Windows app for organizing your own Roblox accounts and launching them signed in — one at a time or several at once.",
+  "description": "Free, open-source Windows app for organizing your own Roblox accounts and launching them signed in \u2014 one at a time or several at once.",
   "main": "src/main/index.js",
   "author": "Sacttt",
   "license": "MIT",
@@ -40,7 +40,7 @@
   "build": {
     "appId": "com.local.robloxaccountmanager",
     "productName": "Roblox Account Manager",
-    "copyright": "Copyright © 2024-2026 Sacttt. MIT License.",
+    "copyright": "Copyright \u00a9 2024-2026 Sacttt. MIT License.",
     "directories": {
       "output": "dist",
       "buildResources": "build"
@@ -48,7 +48,10 @@
     "files": [
       "src/**/*",
       "assets/**/*",
-      "package.json"
+      "package.json",
+      "!**/*.map",
+      "!**/*.d.ts",
+      "!**/{CHANGELOG,README,readme}.md"
     ],
     "asar": true,
     "win": {

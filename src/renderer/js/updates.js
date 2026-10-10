@@ -10,6 +10,7 @@ let lastStatus = null;
 
 function statusText() {
   const u = state.updates || {};
+  if (u.portable) return 'Portable version — download new versions from the project website or GitHub releases.';
   if (!u.canCheck) return u.supported === false ? 'Updates are unavailable in this build.' : 'Automatic updates run in the installed app.';
   if (lastStatus === 'checking' || u.checking) return 'Checking for updates…';
   if (u.downloaded && u.pending) return `Version ${u.pending.version} is ready to install.`;
@@ -23,7 +24,8 @@ export function renderUpdateCard() {
   const u = state.updates || {};
   const action = u.downloaded ? `<button class="btn sm primary" data-upd="install">${icon('refresh', 'sm')}Restart &amp; update</button>`
     : u.pending ? `<button class="btn sm primary" data-upd="open">${icon('download', 'sm')}View update</button>`
-      : `<button class="btn sm" data-upd="check" ${u.canCheck ? '' : 'disabled'}>${icon('refresh', 'sm')}Check for updates</button>`;
+      : u.portable ? `<button class="btn sm" data-upd="releases">${icon('external', 'sm')}Releases</button>`
+        : `<button class="btn sm" data-upd="check" ${u.canCheck ? '' : 'disabled'}>${icon('refresh', 'sm')}Check for updates</button>`;
   return `<section class="card"><div class="setting"><div class="txt"><strong>Updates</strong><span data-upd-status>${esc(statusText())}</span></div><div class="ctl">${action}</div></div></section>`;
 }
 
@@ -37,6 +39,8 @@ export function bindUpdateCard(root) {
       else if (!r.updateAvailable) toast({ type: 'success', message: "You're on the latest version." });
     } else if (b.dataset.upd === 'open') {
       openUpdateModal();
+    } else if (b.dataset.upd === 'releases') {
+      call('app:open-external', 'https://github.com/Sacttt/roblox-account-manager/releases/latest').catch(() => {});
     } else if (b.dataset.upd === 'install') {
       call('updates:install').catch(() => {});
     }

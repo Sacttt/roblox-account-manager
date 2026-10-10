@@ -23,8 +23,11 @@ function createUpdater({ app, send, log }) {
   const state = { checking: false, downloading: false, downloaded: false, info: null, lastError: null };
   let timer = null;
 
+  // The portable .exe can't replace itself; users download new versions instead.
+  const portable = !!process.env.PORTABLE_EXECUTABLE_DIR;
+
   const canCheck = () => {
-    if (!autoUpdater) return false;
+    if (!autoUpdater || portable) return false;
     if (app.isPackaged) return true;
     if (process.env.RAM_TEST_UPDATES === '1') { autoUpdater.forceDevUpdateConfig = true; return true; }
     return false;
@@ -79,6 +82,7 @@ function createUpdater({ app, send, log }) {
 
   async function check() {
     if (!autoUpdater) return { ok: false, reason: 'UNSUPPORTED' };
+    if (portable) return { ok: false, reason: 'PORTABLE' };
     if (!canCheck()) return { ok: false, reason: 'DEV_BUILD' };
     try {
       const r = await autoUpdater.checkForUpdates();
@@ -114,6 +118,7 @@ function createUpdater({ app, send, log }) {
   function getState() {
     return {
       supported: !!autoUpdater,
+      portable,
       canCheck: canCheck(),
       checking: state.checking,
       downloading: state.downloading,
