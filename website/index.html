@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src https://api.github.com; font-src 'self'; base-uri 'self'; form-action 'none'; object-src 'none'">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <title>Roblox Account Manager — free multi-account launcher for Windows</title>
+  <meta name="description" content="A free, open-source Windows app that keeps your Roblox accounts organized and opens any of them — or several at once — already signed in. No subscriptions, no ads.">
+  <meta name="theme-color" content="#0b0c10">
+  <meta property="og:title" content="Roblox Account Manager">
+  <meta property="og:description" content="Free, open-source Windows app to organize your Roblox accounts and launch them signed in — one at a time or several at once.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://sacttt.github.io/roblox-account-manager/">
+  <meta property="og:image" content="https://sacttt.github.io/roblox-account-manager/assets/og.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="icon" type="image/png" href="assets/icon.png">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <a class="skip" href="#main">Skip to content</a>
+  <canvas id="bubbles" aria-hidden="true"></canvas>
+  <canvas id="bursts" aria-hidden="true"></canvas>
+
+  <header class="nav" id="top">
+    <div class="wrap nav-inner">
+      <a class="brand" href="#top" aria-label="Roblox Account Manager home">
+        <img src="assets/icon.png" alt="" width="28" height="28">
+        <span>Roblox Account Manager</span>
+      </a>
+      <nav class="links" aria-label="Sections">
+        <a href="#features">Features</a>
+        <a href="#preview">Preview</a>
+        <a href="#install">Install</a>
+        <a href="#faq">FAQ</a>
+      </nav>
+      <div class="nav-actions">
+        <button class="icon-btn" id="sound-toggle" type="button" aria-pressed="true" title="Click sounds on" aria-label="Toggle click sounds">
+          <svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9z"/><path class="wave" d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"/><path class="mute" d="M16 9l5 6M21 9l-5 6"/></svg>
+        </button>
+        <a class="btn ghost sm" href="https://github.com/Sacttt/roblox-account-manager" target="_blank" rel="noopener" data-sound>
+          <svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 0 0-3.2 19.5c.5.1.7-.2.7-.5v-1.8c-2.8.6-3.4-1.2-3.4-1.2-.5-1.2-1.1-1.5-1.1-1.5-.9-.6.1-.6.1-.6 1 .1 1.5 1 1.5 1 .9 1.6 2.4 1.1 3 .9.1-.7.4-1.1.6-1.4-2.2-.3-4.6-1.1-4.6-5a3.9 3.9 0 0 1 1-2.7 3.6 3.6 0 0 1 .1-2.7s.9-.3 2.8 1a9.6 9.6 0 0 1 5 0c1.9-1.3 2.8-1 2.8-1 .6 1.4.2 2.4.1 2.7a3.9 3.9 0 0 1 1 2.7c0 3.9-2.4 4.7-4.6 5 .4.3.7.9.7 1.9V21c0 .3.2.6.7.5A10 10 0 0 0 12 2z" class="fill"/></svg>
+          <span>Source</span>
+        </a>
+        <a class="btn primary sm" href="#download" data-download data-sound="pop">Download</a>
+      </div>
+    </div>
+  </header>
+
+  <main id="main">
+    <!-- ======================================================= HERO -->
+    <section class="hero">
+      <div class="wrap hero-grid">
+        <div class="hero-copy reveal">
+          <div class="pills">
+            <span class="pill free">100% free · open source · no ads</span>
+            <span class="pill" data-version-pill>Windows 10 &amp; 11</span>
+          </div>
+          <h1>All your Roblox accounts.<br><span class="grad">One click to play.</span></h1>
+          <p class="lead">A free Windows app that keeps your Roblox accounts organized and opens any of them — or several at once — already signed in. Your sign-ins stay encrypted on your own PC.</p>
+          <div class="cta" id="download">
+            <a class="btn primary lg" href="https://github.com/Sacttt/roblox-account-manager/releases/latest" data-download data-sound="pop">
+              <svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M4 19h16"/></svg>
+              <span data-download-label>Download for Windows</span>
+            </a>
+            <a class="btn lg" href="https://github.com/Sacttt/roblox-account-manager" target="_blank" rel="noopener" data-sound>
+              <svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="m8 7-5 5 5 5M16 7l5 5-5 5"/></svg>
+              <span>View source code</span>
+            </a>
+          </div>
+          <p class="fine" data-download-meta>Installer for Windows 10/11 (64-bit) · <a href="https://github.com/Sacttt/roblox-account-manager/releases/latest" data-portable>portable version</a> · free forever</p>
+        </div>
+
+        <div class="hero-visual reveal" aria-label="App preview">
+          <div class="window">
+            <div class="window-bar"><i></i><i></i><i></i><span>Roblox Account Manager</span></div>
+            <div class="window-tabs" role="tablist" aria-label="Preview screens">
+              <button role="tab" aria-selected="true" data-hero-shot="dashboard" data-sound>Dashboard</button>
+              <button role="tab" aria-selected="false" data-hero-shot="accounts-grid" data-sound>Accounts</button>
+              <button role="tab" aria-selected="false" data-hero-shot="account-details" data-sound>Details</button>
+              <button role="tab" aria-selected="false" data-hero-shot="dashboard-light" data-sound>Light theme</button>
+            </div>
+            <div class="window-body">
+              <img src="assets/screens/dashboard.webp" alt="The Roblox Account Manager dashboard with account stats, quick launch and recent activity" width="1360" height="820" data-hero-img>
+            </div>
+          </div>
+          <div class="float-card fc-1"><span class="dot green"></span>4 accounts online</div>
+          <div class="float-card fc-2"><span class="dot amber"></span>Launch Together · 3 of 3</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================================================= FREE -->
+    <section class="free-band reveal" aria-label="Pricing">
+      <div class="wrap free-grid">
+        <div class="free-title"><strong>Free. Actually free.</strong><span>No catch, now or later.</span></div>
+        <ul>
+          <li><b>$0</b> No price, no subscriptions, no paid tiers</li>
+          <li><b>0</b> ads, trackers or analytics — in the app or on this site</li>
+          <li><b>MIT</b> Open-source license: read, build and modify it yourself</li>
+          <li><b>All</b> features included for everyone</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ======================================================= FEATURES -->
+    <section class="section" id="features">
+      <div class="wrap">
+        <div class="section-head reveal">
+          <span class="kicker">Features</span>
+          <h2>Everything for juggling many accounts — nothing you don't need</h2>
+          <p>Built like a modern desktop app: fast, keyboard-friendly, and honest about what it knows.</p>
+        </div>
+        <div class="feature-grid">
+          <article class="feature reveal"><span class="ic"><svg class="i" viewBox="0 0 24 24"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg></span><h3>One-click, signed-in launch</h3><p>Pick a game — Place ID, game link, private server or a specific server — and open Roblox already signed in as the right account.</p></article>
+          <article class="feature reveal"><span class="ic"><svg class="i" viewBox="0 0 24 24"><path d="m12 3 9 5-9 5-9-5z"/><path d="m3 13 9 5 9-5"/></svg></span><h3>Launch Together</h3><p>Select several accounts and open them side by side. Multi Roblox runs them in parallel, one window at a time, with live progress and a cancel button.</p></article>
+          <article class="feature reveal"><span class="ic"><svg class="i" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.6-3.6 3.2-5.5 6.5-5.5s5.9 1.9 6.5 5.5"/><path d="M16 4.6a3.5 3.5 0 0 1 0 6.8M18.5 14.8c1.6.8 2.7 2.5 3 5.2"/></svg></span><h3>Unlimited, organized accounts</h3><p>Nicknames, groups, tags, notes, favorites and pins. Search, filter and sort; switch between cards and a compact table.</p></article>
+          <article class="feature reveal"><span class="ic"><svg class="i" viewBox="0 0 24 24"><path d="M12 3 4.5 6v6c0 4.5 3.2 7.8 7.5 9 4.3-1.2 7.5-4.5 7.5-9V6z"/><path d="m8.5 12 2.5 2.5 4.5-5"/></svg></span><h3>Encrypted sign-ins</h3><p>Sessions are encrypted with Windows' own data protection, kept apart from everything else, and never written to logs or backups.</p></article>
+          <article class="feature reveal"><span class="ic"><svg class="i" viewBox="0 0 24 24"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg></span><h3>Honest live status</h3><p>Online / in-game status straight from Roblox, batched into one request and always labelled with how fresh it is. Never guessed.</p></article>
+          <article class="feature reveal"><span class="ic"><svg class="i" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></span><h3>Command palette</h3><p>Press <kbd>Ctrl</kbd> <kbd>K</kbd>, type a name, hit Enter — you're launching. Shortcuts for everything else, too.</p></article>
+          <article class="feature reveal"><span class="ic"><svg class="i" viewBox="0 0 24 24"><rect x="2.5" y="7" width="19" height="11" rx="4"/><path d="M7 11v3M5.5 12.5h3"/></svg></span><h3>Saved games &amp; servers</h3><p>Keep your favorite games and private servers one click away. Recent games are remembered automatically.</p></article>
+          <article class="feature reveal"><span class="ic"><svg class="i" viewBox="0 0 24 24"><path d="M12 4v11M7 10l5 5 5-5M4 19h16"/></svg></span><h3>Backups, themes &amp; updates</h3><p>Export your organization (never your sign-ins), choose from 8 themes including light, and get verified updates automatically.</p></article>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================================================= PREVIEW -->
+    <section class="section alt" id="preview">
+      <div class="wrap">
+        <div class="section-head reveal">
+          <span class="kicker">Preview</span>
+          <h2>Take a look around before you download</h2>
+          <p>Real screenshots of the app, filled with demo accounts.</p>
+        </div>
+        <div class="gallery reveal">
+          <div class="gallery-tabs" role="tablist" aria-label="Screenshots" data-gallery-tabs></div>
+          <figure class="gallery-stage">
+            <button class="window shot-btn" type="button" data-open-lightbox aria-label="Open larger screenshot">
+              <span class="window-bar"><i></i><i></i><i></i><span data-gallery-title>Dashboard</span></span>
+              <img src="assets/screens/dashboard.webp" alt="" width="1360" height="820" data-gallery-img>
+            </button>
+            <figcaption data-gallery-caption></figcaption>
+          </figure>
+        </div>
+
+        <div class="demo reveal" id="demo">
+          <div class="demo-head">
+            <div><span class="kicker">Interactive demo</span><h3>Try Launch Together</h3><p>Pick a game, select some accounts and launch them — no real accounts involved.</p></div>
+            <span class="pill">Demo data</span>
+          </div>
+          <div class="demo-app">
+            <div class="demo-bar">
+              <label class="demo-game"><span>Game</span>
+                <select data-demo-game aria-label="Demo game">
+                  <option value="Adopt Me!">Adopt Me!</option>
+                  <option value="Blox Fruits">Blox Fruits</option>
+                  <option value="Brookhaven RP">Brookhaven RP</option>
+                  <option value="Private server · Trading">Private server · Trading</option>
+                </select>
+              </label>
+              <input class="demo-search" type="search" placeholder="Search accounts…" aria-label="Search demo accounts" data-demo-search>
+              <button class="btn sm" type="button" data-demo-all data-sound>Select all</button>
+            </div>
+            <div class="demo-grid" data-demo-grid></div>
+            <div class="demo-foot">
+              <span data-demo-count>0 selected</span>
+              <div class="demo-progress" hidden data-demo-progress><div></div></div>
+              <button class="btn primary" type="button" data-demo-launch disabled data-sound="pop">
+                <svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4.5v15l12-7.5z" class="fill"/></svg>Launch together
+              </button>
+            </div>
+            <p class="demo-log" data-demo-log aria-live="polite">Select accounts to launch them together.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================================================= INSTALL -->
+    <section class="section" id="install">
+      <div class="wrap">
+        <div class="section-head reveal">
+          <span class="kicker">Install</span>
+          <h2>Up and running in about a minute</h2>
+        </div>
+        <ol class="steps">
+          <li class="step reveal"><span class="n">1</span><h3>Download</h3><p>Get <b data-file-name>the installer</b> from the latest release. No account or payment needed.</p><a class="btn sm" href="https://github.com/Sacttt/roblox-account-manager/releases/latest" data-download data-sound="pop">Download</a></li>
+          <li class="step reveal"><span class="n">2</span><h3>Run the installer</h3><p>It installs just for you — no administrator rights. Windows may show “Windows protected your PC” because the app isn't code-signed: click <b>More info → Run anyway</b>.</p></li>
+          <li class="step reveal"><span class="n">3</span><h3>Add your accounts</h3><p>Choose <b>Sign in with Roblox</b> and log in on Roblox's own page. The account appears automatically — nothing to copy.</p></li>
+          <li class="step reveal"><span class="n">4</span><h3>Pick a game &amp; launch</h3><p>Enter a Place ID or paste a game link, then hit <b>Launch</b> — or select several accounts and <b>Launch together</b>.</p></li>
+        </ol>
+        <div class="install-notes reveal">
+          <div class="note-card"><h4>Requirements</h4><ul><li>Windows 10 or 11, 64-bit</li><li>Roblox installed (Bloxstrap and Fishstrap work too)</li><li>About 300 MB of disk space</li></ul></div>
+          <div class="note-card"><h4>Prefer no installer?</h4><p>The <a href="https://github.com/Sacttt/roblox-account-manager/releases/latest" data-portable>portable .exe</a> runs from anywhere, like a USB stick. It doesn't update itself — grab new versions here.</p></div>
+          <div class="note-card"><h4>Updates &amp; uninstall</h4><p>The installed app checks for updates and asks before installing them. Uninstall from Windows Settings → Apps; your data folder is kept unless you delete it.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================================================= SECURITY -->
+    <section class="section alt" id="privacy">
+      <div class="wrap privacy">
+        <div class="reveal">
+          <span class="kicker">Privacy &amp; security</span>
+          <h2>Your accounts never leave your PC</h2>
+          <p>Roblox Account Manager has no servers. It talks only to Roblox (to show profiles and launch games) and to GitHub (to check for updates).</p>
+        </div>
+        <ul class="checks reveal">
+          <li>Sign-ins are encrypted with Windows DPAPI, tied to your Windows user.</li>
+          <li>Sign-ins are never written to logs, diagnostic reports or backups.</li>
+          <li>The UI runs sandboxed with a strict content security policy.</li>
+          <li>Removing an account deletes its saved sign-in, notes and cached images.</li>
+          <li>Every line of code is public on GitHub.</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ======================================================= FAQ -->
+    <section class="section" id="faq">
+      <div class="wrap narrow">
+        <div class="section-head reveal"><span class="kicker">FAQ</span><h2>Questions</h2></div>
+        <div class="faq reveal">
+          <details><summary data-sound>Is it really free?</summary><p>Yes. There's no paid version, no subscription, no ads and no in-app purchases. It's open source under the MIT license.</p></details>
+          <details><summary data-sound>Is it safe to give the app my Roblox sign-in?</summary><p>The recommended way is “Sign in with Roblox”, which uses Roblox's own login page in a private window. The resulting session is encrypted with Windows' built-in protection and only ever sent to Roblox. Never share a .ROBLOSECURITY cookie with anyone — including people offering “help”.</p></details>
+          <details><summary data-sound>Can I run several accounts at the same time?</summary><p>Yes — turn on Multi Roblox in Settings, close Roblox, then use Launch Together. Each account opens in its own Roblox window.</p></details>
+          <details><summary data-sound>Does it work with Bloxstrap or Fishstrap?</summary><p>Yes. By default the app uses whichever launcher Windows has registered for Roblox, and you can pick one explicitly in Settings.</p></details>
+          <details><summary data-sound>Can this get my account banned?</summary><p>The app uses the same sign-in tickets as Roblox's own Play button. However, Roblox doesn't officially support running several clients at once, and using alternate accounts to break Roblox's Terms of Use is against their rules. Use it responsibly — at your own risk.</p></details>
+          <details><summary data-sound>Is there a Mac or Linux version?</summary><p>Not currently. Launching Roblox relies on Windows, so the app targets Windows 10 and 11.</p></details>
+          <details><summary data-sound>Is this made by Roblox?</summary><p>No. It's an independent community project and is not affiliated with or endorsed by Roblox Corporation.</p></details>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================================================= FINAL CTA -->
+    <section class="final reveal">
+      <div class="wrap final-inner">
+        <img src="assets/icon.png" alt="" width="64" height="64">
+        <h2>Ready when you are.</h2>
+        <p data-final-version>Free download for Windows 10 &amp; 11.</p>
+        <div class="cta center">
+          <a class="btn primary lg" href="https://github.com/Sacttt/roblox-account-manager/releases/latest" data-download data-sound="pop"><span data-download-label>Download for Windows</span></a>
+          <a class="btn lg" href="https://github.com/Sacttt/roblox-account-manager" target="_blank" rel="noopener" data-sound>Star on GitHub</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="wrap footer-inner">
+      <div class="brand"><img src="assets/icon.png" alt="" width="22" height="22"><span>Roblox Account Manager</span></div>
+      <nav aria-label="Footer">
+        <a href="https://github.com/Sacttt/roblox-account-manager" target="_blank" rel="noopener">Source code</a>
+        <a href="https://github.com/Sacttt/roblox-account-manager/releases" target="_blank" rel="noopener">All releases</a>
+        <a href="https://github.com/Sacttt/roblox-account-manager/issues" target="_blank" rel="noopener">Report a problem</a>
+        <a href="https://github.com/Sacttt/roblox-account-manager/blob/main/LICENSE" target="_blank" rel="noopener">MIT license</a>
+      </nav>
+      <p class="legal">Free and open source. Not affiliated with or endorsed by Roblox Corporation. Roblox is a trademark of Roblox Corporation.</p>
+    </div>
+  </footer>
+
+  <dialog class="lightbox" data-lightbox aria-label="Screenshot">
+    <button class="icon-btn close" type="button" aria-label="Close" data-lightbox-close data-sound>✕</button>
+    <img alt="" data-lightbox-img>
+  </dialog>
+
+  <script type="module" src="js/site.js"></script>
+</body>
+</html>

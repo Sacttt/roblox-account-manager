@@ -1,113 +1,87 @@
-# Releasing & auto-updates
+# Releasing & updates
 
-This app auto-updates with **electron-updater** using **GitHub Releases** as the
-feed. Updates download in the background, are verified against the SHA512 in the
-release metadata over HTTPS (and the installer's Authenticode signature too, if
-you code-sign), and install on restart. The current version is always the
-`version` field in `package.json` — the only place it's defined.
+The app updates itself with **electron-updater**, using **GitHub Releases** as the feed. The
+version lives in one place: `"version"` in `package.json`.
 
-Your account is already wired in: `owner: Sacttt`, `repo: roblox-account-manager`
-(set in `package.json` and `dev-app-update.yml`).
+Each release contains:
 
-## One-time setup (you must do this — needs your GitHub login)
+| File | What it is |
+| --- | --- |
+| `RobloxAccountManager-Setup-<version>.exe` | Installer (per-user, no admin). Installed copies update from this. |
+| `RobloxAccountManager-Portable-<version>.exe` | Portable app. Doesn't update itself; users download the new one. |
+| `latest.yml`, `…Setup-<version>.exe.blockmap` | Update metadata (version, SHA-512 hash, size). Needed by the updater. |
 
-1. **Create the repo** `roblox-account-manager` under your account at
-   https://github.com/new — make it **Public** (public means your users need no
-   login to receive updates). Don't rename it, or update the two files above to match.
-2. **Put the code in the repo** (from the `roblox-manager` folder), either with
-   GitHub Desktop, or in a terminal there:
-   ```
-   git init
-   git add .
-   git commit -m "Roblox Account Manager"
-   git branch -M main
-   git remote add origin https://github.com/Sacttt/roblox-account-manager.git
-   git push -u origin main
-   ```
-   (A `.gitignore` already excludes `node_modules/` and `dist/`.)
-3. *(Optional, recommended)* **Code signing.** Without it, updates still work and
-   are integrity-checked via SHA512 over HTTPS, but Windows SmartScreen warns on
-   install and electron-updater can't verify a publisher signature. To sign, set
-   `CSC_LINK` (path/base64 of your .pfx) and `CSC_KEY_PASSWORD` in the build
-   environment only. Never commit them.
+The website's download button always points at the installer of the **latest published**
+release (drafts and pre-releases are ignored), so publishing a release updates the site too.
 
-## Publishing a release — pick ONE path
+## How updating works for users
 
-### Path A — from your PC (simplest, matches release.bat)
+- The installed app checks GitHub shortly after start and then every 6 hours. It never
+  downloads on its own: the user sees the new version and its release notes and chooses
+  **Download update**, then **Restart & update**.
+- Downloads are verified against the SHA-512 in `latest.yml` over HTTPS before installing.
+- Put `[critical]` anywhere in the release notes to mark a required update: the prompt then
+  says so and has no "Later" button.
+- Portable copies show a link to the releases page instead of updating.
+- Running from source (`npm start`) never checks for updates. To try the updater from source,
+  run with `RAM_TEST_UPDATES=1` (uses `dev-app-update.yml`).
 
-1. Create a GitHub token with `repo` scope: https://github.com/settings/tokens
-2. In the terminal, in the project folder:
-   ```
-   set GH_TOKEN=ghp_your_token_here
-   ```
-   (The token lives only in that window — never in the app.)
-3. Bump `"version"` in `package.json`, then double-click **`release.bat`**.
+## Publishing a release
 
-`release.bat` runs `npm run release`, which builds the NSIS installer and uploads
-`Roblox Account Manager-Setup-<version>.exe`, `latest.yml`, and the `.blockmap`
-to a **draft** GitHub release. Open the releases page, paste your changelog, and
-**Publish**. Installed copies pick it up.
+1. Bump `"version"` in `package.json` (for example `2.0.1`), update `CHANGELOG.md`, commit and
+   push to `main`.
+2. Pick one:
+   - **On GitHub's servers (recommended):** push a matching tag:
+     ```
+     git tag v2.0.1
+     git push origin v2.0.1
+     ```
+     or run *Actions → Release → Run workflow*. The workflow checks the tag matches
+     `package.json`, runs lint and unit tests, builds on Windows and uploads everything to a
+     **draft** release. No personal token needed.
+   - **From your PC:** create a token with `repo` scope at
+     https://github.com/settings/tokens, then in a terminal in the project folder:
+     ```
+     set GH_TOKEN=ghp_your_token_here
+     release.bat
+     ```
+     The token stays in that terminal window only. Never commit it.
+3. Open the draft on the Releases page, check the files are attached, write the release notes
+   (they're shown in the app) and press **Publish**.
 
-### Path B — on GitHub's servers (no local token, no build wait)
+## Before publishing: test the build
 
-The included `.github/workflows/release.yml` builds and publishes for you when you
-push a version tag. After the repo is pushed once:
-```
-git tag v1.0.1
-git push origin v1.0.1
-```
-GitHub builds the Windows installer and creates the release automatically (using
-its built-in token). Bump `"version"` in `package.json` to match the tag first.
+Every push already runs CI (lint, unit tests, end-to-end tests and a Windows build). To try the
+exact installer before releasing, open the CI run for your commit, download the
+`roblox-account-manager-windows` artifact and install it on a Windows PC.
 
-- **Release notes**: whatever you write in the GitHub release body shows in the
-  in-app "What's new" panel.
-- **Mark a release critical/required** (optional): put `[critical]` anywhere in
-  the release notes. The in-app prompt then hides "Later" so the user updates
-  before continuing. Leave it out for normal updates.
-
-- **Release notes**: whatever you write in the GitHub release body shows in the
-  in-app "What's new" panel.
-- **Mark a release critical/required** (optional): put `[critical]` anywhere in
-  the release notes. The in-app prompt then hides "Later" so the user updates
-  before continuing. Leave it out for normal updates.
-
-## Testing
-
-1. **Development** (`npm start`): update checks are OFF by design, so you never
-   hit a missing-config error. The About card shows the version; "Check for
-   updates" says updates only run in the installed app.
-2. **Local packaged build** (`npm run build`): produces `dist/…Setup.exe` with
-   `--publish never`. Install it to confirm the app runs, the window/titlebar,
-   and that the About card shows the right version.
-3. **Test release**: bump the version to a prerelease (e.g. `1.0.1`), publish to
-   GitHub, install the PREVIOUS version, launch it, and confirm the prompt.
-   To test from a dev run without installing, launch with the feed enabled:
-   ```
-   set RAM_TEST_UPDATES=1
-   npm start
-   ```
-   (uses `dev-app-update.yml`).
-4. **Production release**: the normal loop above.
-
-**What to verify**
+Check at least:
 
 | Check | How |
 | --- | --- |
-| Version detection | About card shows `package.json` version |
-| Update available | Install older version, publish newer, relaunch → prompt appears |
-| Downloading | Click Update Now → progress bar advances |
-| Installation | Download complete → Restart & Install → app reopens on new version |
-| Restart behavior | App relaunches automatically after install |
-| Release notes | GitHub release body appears in "What's new" |
-| Failed download | Disconnect mid-download → clear error, current version still works, Retry offered |
-| Offline | No network at launch → no crash, "up to date"/silent, app usable |
-| Already up to date | Same version installed → "You're up to date." |
+| Installs without admin | Run the Setup exe as a normal user; app opens after install |
+| Data carried over | Install over a previous version; accounts and sign-ins are still there |
+| Version | *Settings → About & updates* shows the new version |
+| Launch | Launch one account, then Launch Together with two (Multi Roblox on) |
+| Update path | Install the previous release, publish the new one, open the old app → update offered, downloads, restarts on the new version |
+| Offline | Start with no network → no crash; status shows unknown/outdated, not fake |
+| Uninstall | *Settings → Apps* → uninstall; data folder stays in `%APPDATA%\roblox-account-manager` |
 
-## What infrastructure you actually need
+## Code signing (optional)
 
-- A **public GitHub repository** with **Releases** (the only hosting required).
-  Your users download updates from there with no account or token.
-- To publish: **either** a `GH_TOKEN` on your PC (Path A) **or** the included
-  Actions workflow with no token at all (Path B).
-- *(Optional)* a **code-signing certificate** (`CSC_LINK` / `CSC_KEY_PASSWORD`).
-- No server of your own.
+Without a certificate the app works and updates are still integrity-checked, but Windows
+SmartScreen warns on first run. To sign, provide `CSC_LINK` (path or base64 of a `.pfx`) and
+`CSC_KEY_PASSWORD` to the build — as GitHub Actions secrets for the Release workflow (and remove
+`CSC_IDENTITY_AUTO_DISCOVERY: "false"` there), or as environment variables for `release.bat`.
+Never commit them.
+
+## Building on Linux
+
+`npm run build` also works on Linux if Wine is installed (`wine64` plus 32-bit `wine32`), which
+is useful for checking a build without a Windows PC. Test the result on real Windows.
+
+## The website
+
+`website/` is published to GitHub Pages by `.github/workflows/pages.yml` whenever it changes on
+`main`. One-time setup: *Settings → Pages → Source: GitHub Actions*. See
+[website/README.md](website/README.md).
