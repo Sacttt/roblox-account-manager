@@ -10,6 +10,7 @@
  * only and are never written to disk in plaintext.
  */
 
+const fs = require('fs');
 const { readJSON, writeJSON } = require('./json-store');
 
 const TEST_PREFIX = 'test-insecure:';
@@ -74,7 +75,10 @@ class Vault {
   }
 
   has(id) {
-    return !!(this.entries[id] || this.memoryOnly[id]);
+    if (this.memoryOnly[id]) return true;
+    const entry = this.entries[id];
+    if (!entry) return false;
+    return this.decrypt(entry.enc) !== null;
   }
 
   get(id) {
@@ -105,11 +109,38 @@ class Vault {
     return true;
   }
 
+  sanitizeBackup(removedIds) {
+    if (!removedIds || !removedIds.length) return;
+    const bakFile = `${this.file}.bak`;
+    if (!fs.existsSync(bakFile)) return;
+    try {
+      const text = fs.readFileSync(bakFile, 'utf8');
+      const data = JSON.parse(text);
+      if (data && data.entries && typeof data.entries === 'object') {
+        let changed = false;
+        for (const id of removedIds) {
+          if (data.entries[id]) {
+            delete data.entries[id];
+            changed = true;
+          }
+        }
+        if (changed) {
+          fs.writeFileSync(bakFile, `${JSON.stringify(data, null, 2)}\n`, { mode: 0o600 });
+        }
+      }
+    } catch (_) {
+      try { fs.rmSync(bakFile, { force: true }); } catch (__) { /* ignore */ }
+    }
+  }
+
   remove(id) {
     const had = this.has(id);
     delete this.entries[id];
     delete this.memoryOnly[id];
-    if (had) this.save();
+    if (had) {
+      this.save();
+      this.sanitizeBackup([id]);
+    }
     return had;
   }
 
@@ -117,17 +148,26 @@ class Vault {
     this.entries = {};
     this.memoryOnly = {};
     this.save();
+    try { fs.rmSync(`${this.file}.bak`, { force: true }); } catch (_) { /* ignore */ }
   }
 
   /** Drops secrets whose account no longer exists. */
   prune(validIds) {
     const keep = new Set(validIds);
     let changed = false;
+    const removed = [];
     for (const id of Object.keys(this.entries)) {
-      if (!keep.has(id)) { delete this.entries[id]; changed = true; }
+      if (!keep.has(id)) {
+        delete this.entries[id];
+        removed.push(id);
+        changed = true;
+      }
     }
     for (const id of Object.keys(this.memoryOnly)) if (!keep.has(id)) delete this.memoryOnly[id];
-    if (changed) this.save();
+    if (changed) {
+      this.save();
+      this.sanitizeBackup(removed);
+    }
   }
 
   status() {

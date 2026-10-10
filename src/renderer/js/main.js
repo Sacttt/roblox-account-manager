@@ -211,8 +211,8 @@ document.addEventListener('keydown', async (e) => {
     return;
   }
   if (mod && /^[1-5]$/.test(e.key)) { e.preventDefault(); navigate(ORDER[Number(e.key) - 1]); return; }
-  if (mod && e.key === 'Enter' && state.selection.size) { e.preventDefault(); launchAccounts([...state.selection]); return; }
   if (inField(e) || state.detailId) return;
+  if (mod && e.key === 'Enter' && state.selection.size) { e.preventDefault(); launchAccounts([...state.selection]); return; }
   if (mod && key === 'a' && state.view === 'accounts' && mounted.ctl && mounted.ctl.visibleIds) {
     e.preventDefault();
     mounted.ctl.visibleIds().forEach((id) => state.selection.add(id));

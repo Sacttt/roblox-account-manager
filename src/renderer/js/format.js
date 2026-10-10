@@ -97,6 +97,7 @@ export function monogram(name) {
 }
 
 const MESSAGES = {
+  CHALLENGE_REQUIRED: 'Roblox requires security verification (captcha or 2FA). Sign in using "Sign in with Roblox" to complete it.',
   GAME_REQUIRED: 'Pick a game first — enter a Place ID or paste a game link in the launch bar.',
   GAME_TARGET_INVALID: "That doesn't look like a Roblox game. Use a Place ID (numbers only) or a roblox.com/games/… link.",
   SHARE_LINK_UNSUPPORTED: 'Share links (roblox.com/share?code=…) can\'t be launched directly. Open the link in your browser, then copy the full address that contains "privateServerLinkCode".',

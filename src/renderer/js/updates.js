@@ -22,11 +22,13 @@ function statusText() {
 
 export function renderUpdateCard() {
   const u = state.updates || {};
+  const isCritical = u.pending && u.pending.critical;
+  const badge = isCritical ? ` <span class="badge red">${icon('alert')}Critical</span>` : '';
   const action = u.downloaded ? `<button class="btn sm primary" data-upd="install">${icon('refresh', 'sm')}Restart &amp; update</button>`
     : u.pending ? `<button class="btn sm primary" data-upd="open">${icon('download', 'sm')}View update</button>`
       : u.portable ? `<button class="btn sm" data-upd="releases">${icon('external', 'sm')}Releases</button>`
         : `<button class="btn sm" data-upd="check" ${u.canCheck ? '' : 'disabled'}>${icon('refresh', 'sm')}Check for updates</button>`;
-  return `<section class="card"><div class="setting"><div class="txt"><strong>Updates</strong><span data-upd-status>${esc(statusText())}</span></div><div class="ctl">${action}</div></div></section>`;
+  return `<section class="card"><div class="setting"><div class="txt"><strong>Updates${badge}</strong><span data-upd-status>${esc(statusText())}</span></div><div class="ctl">${action}</div></div></section>`;
 }
 
 export function bindUpdateCard(root) {
@@ -69,7 +71,7 @@ export function openUpdateModal() {
   const notes = Array.isArray(p.releaseNotes) ? p.releaseNotes.map((n) => sanitizeNotes(n.note)).join('') : sanitizeNotes(p.releaseNotes);
   modal = openModal({
     title: p.critical ? 'A required update is available' : `Version ${p.version} is available`,
-    subtitle: `You have ${p.currentVersion || state.version}${p.releaseDate ? ` · released ${date(p.releaseDate)}` : ''}`,
+    subtitle: `${p.critical ? `<span class="badge red" style="margin-right:6px">${icon('alert')}Critical</span>` : ''}You have ${p.currentVersion || state.version}${p.releaseDate ? ` · released ${date(p.releaseDate)}` : ''}`,
     iconName: 'download',
     dismissable: !p.critical,
     body: `${notes ? `<div class="card card-body" style="max-height:240px;overflow:auto;color:var(--text-2)">${notes}</div>` : '<p class="muted" style="margin:0">No release notes were provided.</p>'}

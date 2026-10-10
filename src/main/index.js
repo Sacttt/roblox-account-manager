@@ -21,7 +21,7 @@ const { createUpdater } = require('./updater');
 const { privilegedSchemes, registerAppProtocol, ORIGIN } = require('./protocol');
 const { registerIpc } = require('./ipc');
 
-const TEST_MODE = process.env.RAM_TEST_MODE === '1';
+const TEST_MODE = !app.isPackaged && process.env.RAM_TEST_MODE === '1';
 const ICON_PATH = path.join(__dirname, '..', '..', 'assets', 'icon.ico');
 
 protocol.registerSchemesAsPrivileged(privilegedSchemes());
@@ -39,8 +39,14 @@ function start() {
   const log = logger.scoped('main');
   log.info(`starting v${app.getVersion()} (electron ${process.versions.electron}) data=${dataDir}`);
 
-  process.on('uncaughtException', (e) => log.error('uncaught exception', e && e.stack ? e.stack : e));
-  process.on('unhandledRejection', (e) => log.error('unhandled rejection', e && e.stack ? e.stack : e));
+  process.on('uncaughtException', (e) => {
+    log.error('uncaught exception', e && e.stack ? e.stack : e);
+    if (!mainWindow && !tray) app.exit(1);
+  });
+  process.on('unhandledRejection', (e) => {
+    log.error('unhandled rejection', e && e.stack ? e.stack : e);
+    if (!mainWindow && !tray) app.exit(1);
+  });
 
   let mainWindow = null;
   let tray = null;
@@ -304,6 +310,8 @@ function start() {
     const avatars = new AvatarStore({ avatarDir: paths.avatarDir, metaFile: paths.avatarMeta, iconDir: paths.customIconDir, api, log: logger.scoped('avatars') });
     const activity = new ActivityLog({ file: paths.activity, log });
     const accounts = new AccountService({ paths, vault, api, avatars, activity, log: logger.scoped('accounts'), getSettings });
+    accounts.on('error', (e) => log.error('accounts error', e));
+    accounts.on('save-error', (e) => log.error('accounts save error', e));
     accounts.load();
     if (!vault.persistent) startupNotes.push('Windows encryption is unavailable, so saved sign-ins will only be kept until the app closes.');
     const presets = new PresetStore({ file: paths.presets, log });

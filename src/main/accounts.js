@@ -73,10 +73,13 @@ class AccountService extends EventEmitter {
       const { roblosecurity, roblosecurityEnc, ...rest } = a;
       return rest;
     });
-    try {
-      writeJSON(`${this.paths.accounts.replace(/\.json$/, '')}.pre-v2-backup.json`, sanitized, { backup: false });
-    } catch (e) {
-      this.log.warn('could not write pre-migration backup', e);
+    const backupFile = `${this.paths.accounts.replace(/\.json$/, '')}.pre-v2-backup.json`;
+    if (!fs.existsSync(backupFile)) {
+      try {
+        writeJSON(backupFile, sanitized, { backup: false });
+      } catch (e) {
+        this.log.warn('could not write pre-migration backup', e);
+      }
     }
 
     const migrated = [];
@@ -123,7 +126,10 @@ class AccountService extends EventEmitter {
       writeJSON(this.paths.accounts, { version: 2, accounts: this.accounts }, { backup });
     } catch (e) {
       this.log.error('failed to save accounts', e);
-      this.emit('error', 'SAVE_FAILED');
+      if (this.listenerCount('error') > 0) {
+        this.emit('error', 'SAVE_FAILED');
+      }
+      this.emit('save-error', 'SAVE_FAILED');
     }
   }
 
@@ -431,16 +437,22 @@ class AccountService extends EventEmitter {
    */
   refresh(opts = {}) {
     const isFull = !opts.ids && !opts.presenceOnly;
-    if (isFull && this.fullRefresh) return this.fullRefresh;
+    if (isFull && this.fullRefresh && (!opts.full || this.fullRefreshForced)) return this.fullRefresh;
     this.pendingRefreshes = (this.pendingRefreshes || 0) + 1;
     this.emit('refresh-state', { running: true });
     const run = (this.refreshQueue || Promise.resolve()).then(() => this.doRefresh(opts)).finally(() => {
       this.pendingRefreshes--;
-      if (isFull && this.fullRefresh === run) this.fullRefresh = null;
+      if (isFull && this.fullRefresh === run) {
+        this.fullRefresh = null;
+        this.fullRefreshForced = false;
+      }
       if (!this.pendingRefreshes) this.emit('refresh-state', { running: false, at: Date.now() });
     });
     this.refreshQueue = run.catch(() => {});
-    if (isFull) this.fullRefresh = run;
+    if (isFull) {
+      this.fullRefresh = run;
+      this.fullRefreshForced = !!opts.full;
+    }
     return run;
   }
 
@@ -496,8 +508,11 @@ class AccountService extends EventEmitter {
       });
     }
 
+    const survivingTargets = targets.filter((a) => this.accounts.some((acc) => acc.id === a.id));
     this.save();
-    this.emitChanged(targets);
+    if (survivingTargets.length) {
+      this.emitChanged(survivingTargets);
+    }
     result.ok = Object.keys(result.errors).length === 0;
     if (!ids) this.lastRefreshResult = result;
     return result;
@@ -528,7 +543,7 @@ class AccountService extends EventEmitter {
       if (existing) {
         if (!mergeExisting) { summary.skipped++; continue; }
         for (const key of ['nickname', 'notes', 'group']) if (candidate[key]) existing[key] = candidate[key];
-        existing.tags = model.cleanTags([...existing.tags, ...candidate.tags]);
+        existing.tags = model.cleanTags([...candidate.tags, ...existing.tags]);
         existing.favorite = existing.favorite || candidate.favorite;
         existing.pinned = existing.pinned || candidate.pinned;
         existing.updatedAt = Date.now();

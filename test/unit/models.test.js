@@ -70,6 +70,35 @@ test('accounts: migrates a legacy record without trusting stale data', () => {
   assert.equal(model.migrateLegacyAccount({ userId: 8, username: 'B', status: 'banned' }).account.profile.isBanned, true);
 });
 
+test('accounts: migrates a legacy record with legacy field names (UserId, alias, comment, etc.)', () => {
+  const r = model.migrateLegacyAccount({
+    Id: 'acc_legacy_1',
+    UserId: 12345,
+    Username: 'LegacyUser',
+    DisplayName: 'LegacyDisp',
+    alias: 'OldAlias',
+    comment: 'OldComment',
+    Group: 'OldGroup',
+    Tags: ['Alpha', 'Beta'],
+    Favorite: true,
+    Pinned: true,
+    LastLaunched: 1650000000000,
+    cookie: COOKIE,
+  });
+  assert.equal(r.account.id, 'acc_legacy_1');
+  assert.equal(r.account.userId, 12345);
+  assert.equal(r.account.username, 'LegacyUser');
+  assert.equal(r.account.displayName, 'LegacyDisp');
+  assert.equal(r.account.nickname, 'OldAlias');
+  assert.equal(r.account.notes, 'OldComment');
+  assert.equal(r.account.group, 'OldGroup');
+  assert.deepEqual(r.account.tags, ['Alpha', 'Beta']);
+  assert.equal(r.account.favorite, true);
+  assert.equal(r.account.pinned, true);
+  assert.equal(r.account.lastLaunchedAt, 1650000000000);
+  assert.equal(r.secret, COOKIE);
+});
+
 test('accounts: only organisation fields are editable', () => {
   assert.deepEqual(model.sanitizePatch({ nickname: ' x ', favorite: true, tags: ['t'] }), { nickname: 'x', favorite: true, tags: ['t'] });
   assert.throws(() => model.sanitizePatch({ userId: 1 }), /FIELD_NOT_EDITABLE:userId/);

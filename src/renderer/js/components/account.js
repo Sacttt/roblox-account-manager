@@ -6,14 +6,14 @@ export function avatarHtml(a, size = '', { presence = true } = {}) {
   const p = presenceInfo(a);
   return `<div class="avatar ${size}">
     <img src="${esc(avatarUrl(a))}" data-fallback="${esc(monogram(displayName(a)))}" alt="" draggable="false" loading="lazy">
-    ${presence ? `<span class="pdot ${p.cls}" title="${esc(p.title)}"></span>` : ''}
+    ${presence ? `<span class="pdot ${p.cls} ${p.stale ? 'stale' : ''}" title="${esc(p.title)}"></span>` : ''}
   </div>`;
 }
 
 export function presenceHtml(a) {
   const p = presenceInfo(a);
   return `<span class="presence ${p.stale ? 'stale' : ''}" title="${esc(p.title)}">
-    <span class="pdot ${p.cls}"></span><span class="truncate">${esc(p.text)}</span>${p.stale ? `<span class="faint nowrap">· ${esc(p.asOf)}</span>` : ''}
+    <span class="pdot ${p.cls} ${p.stale ? 'stale' : ''}"></span><span class="truncate">${esc(p.text)}</span>${p.stale ? `<span class="faint nowrap">· ${esc(p.asOf)}</span>` : ''}
   </span>`;
 }
 

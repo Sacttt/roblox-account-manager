@@ -105,3 +105,31 @@ test('vault: adopts legacy encrypted values only if they decrypt', () => {
   assert.equal(v.adoptEncrypted('acc_b', Buffer.from('garbage').toString('base64')), false);
   assert.equal(v.has('acc_b'), false);
 });
+
+test('vault: has returns false when entry cannot be decrypted', () => {
+  const dir = tmpdir();
+  const ss = fakeSafeStorage();
+  const file = path.join(dir, 's.json');
+  const v = new Vault({ file, safeStorage: ss, log: silent });
+  v.load();
+  v.entries['acc_corrupt'] = { enc: 'bm90LWVuY3J5cHRlZA==', updatedAt: Date.now() };
+  assert.equal(v.has('acc_corrupt'), false);
+  assert.equal(v.get('acc_corrupt'), null);
+});
+
+test('vault: remove and removeAll sanitize .bak so deleted secrets are not retained', () => {
+  const dir = tmpdir();
+  const file = path.join(dir, 'secrets.json');
+  const ss = fakeSafeStorage();
+  const v = new Vault({ file, safeStorage: ss, log: silent });
+  v.load();
+  v.set('acc_1', 'COOKIE-1');
+  v.set('acc_2', 'COOKIE-2');
+  v.remove('acc_1');
+  if (fs.existsSync(`${file}.bak`)) {
+    const bak = JSON.parse(fs.readFileSync(`${file}.bak`, 'utf8'));
+    assert.equal(bak.entries['acc_1'], undefined, 'acc_1 must be sanitized from .bak');
+  }
+  v.removeAll();
+  assert.equal(fs.existsSync(`${file}.bak`), false, '.bak must be removed on removeAll');
+});

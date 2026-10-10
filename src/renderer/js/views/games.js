@@ -19,14 +19,15 @@ export function mount(root) {
     <section class="card" data-recent-wrap><div data-recent></div></section>
     <div class="note" style="margin-top:14px">${icon('info')}<div>Supported: Place IDs (<code>920587237</code>), game links (<code>roblox.com/games/…</code>), private server links that contain <code>privateServerLinkCode=</code>, and specific servers (<code>?gameInstanceId=…</code>). Roblox "share" links must be opened in a browser first.</div></div>
   </div>`;
-  bindLaunchBar(root);
-  root.querySelector('[data-new]').addEventListener('click', () => editPreset(null));
-  root.addEventListener('click', onClick);
+  const inner = root.querySelector('.view-inner');
+  bindLaunchBar(inner);
+  inner.querySelector('[data-new]').addEventListener('click', () => editPreset(null));
+  inner.addEventListener('click', onClick);
 
   function render() {
     const current = state.target.text.trim();
-    root.querySelector('[data-count]').textContent = state.presets.length ? `${state.presets.length}` : '';
-    root.querySelector('[data-presets]').innerHTML = state.presets.length
+    inner.querySelector('[data-count]').textContent = state.presets.length ? `${state.presets.length}` : '';
+    inner.querySelector('[data-presets]').innerHTML = state.presets.length
       ? state.presets.map((p) => `<div class="preset-row ${p.target === current ? 'current' : ''}">
           <span class="ic">${icon('gamepad')}</span>
           <div class="grow"><div class="title truncate">${esc(p.name)}</div><div class="sub truncate mono">${esc(p.target)}</div></div>
@@ -37,7 +38,7 @@ export function mount(root) {
         </div>`).join('')
       : `<div class="empty" style="padding:28px"><div class="art">${icon('gamepad')}</div><h3>No saved games</h3><p>Add the games you play most so you can pick them in one click.</p></div>`;
     const recent = (state.settings.recentTargets || []).slice(0, 10);
-    root.querySelector('[data-recent]').innerHTML = recent.length
+    inner.querySelector('[data-recent]').innerHTML = recent.length
       ? recent.map((t) => {
         const preset = state.presets.find((p) => p.target === t);
         return `<div class="preset-row ${t === current ? 'current' : ''}"><span class="ic" style="color:var(--text-3)">${icon('clock')}</span>

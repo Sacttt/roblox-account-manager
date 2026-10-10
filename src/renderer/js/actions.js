@@ -4,6 +4,7 @@ import { esc, displayName, errorMessage, plural } from './format.js';
 import { toast } from './ui/toast.js';
 import { confirmDialog, promptDialog, openModal } from './ui/modal.js';
 import { openMenu } from './ui/menu.js';
+import { drawerIsDirty } from './components/drawer.js';
 
 export function navigate(view, extra = {}) {
   state.view = view;
@@ -12,7 +13,12 @@ export function navigate(view, extra = {}) {
   notify('view', ...(extra.filters ? ['filters'] : []));
 }
 
-export function openDetail(id) {
+export async function openDetail(id) {
+  if (state.detailId === id) return;
+  if (drawerIsDirty()) {
+    const ok = await confirmDialog({ title: 'Discard changes?', message: 'You have unsaved changes to this account.', confirmLabel: 'Discard', danger: true });
+    if (!ok) return;
+  }
   state.detailId = id;
   notify('detail');
 }
@@ -40,7 +46,7 @@ export async function launchAccounts(ids, { force = false } = {}) {
     flashLaunchBar();
     return;
   }
-  if (state.launch.busy) {
+  if (state.launch.busy || ids.some((id) => state.launchingIds.has(id))) {
     toast({ type: 'warning', message: errorMessage({ code: 'LAUNCH_BUSY' }) });
     return;
   }

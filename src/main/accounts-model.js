@@ -97,31 +97,35 @@ function normalizeAccount(a) {
  */
 function migrateLegacyAccount(old) {
   if (!old || typeof old !== 'object') return null;
-  const secret = typeof old.roblosecurity === 'string' && old.roblosecurity.length > 20 ? old.roblosecurity : null;
-  const encryptedSecret = typeof old.roblosecurityEnc === 'string' ? old.roblosecurityEnc : null;
-  const customIconDataUrl = typeof old.customAvatar === 'string' && old.customAvatar.startsWith('data:image/') ? old.customAvatar : null;
+  const rawSecret = old.roblosecurity || old.Roblosecurity || old.cookie || old.Cookie;
+  const secret = typeof rawSecret === 'string' && rawSecret.length > 20 ? rawSecret : null;
+  const rawEnc = old.roblosecurityEnc || old.RoblosecurityEnc;
+  const encryptedSecret = typeof rawEnc === 'string' ? rawEnc : null;
+  const rawAvatar = old.customAvatar || old.CustomAvatar;
+  const customIconDataUrl = typeof rawAvatar === 'string' && rawAvatar.startsWith('data:image/') ? rawAvatar : null;
   const hasAnySecret = !!(secret || encryptedSecret);
 
+  const lastLaunch = old.lastLaunched ?? old.LastLaunched ?? old.lastLaunchedAt;
   const account = normalizeAccount({
-    id: old.id,
-    userId: old.userId,
-    username: old.username,
-    displayName: old.displayName,
-    nickname: old.nickname,
-    notes: old.notes,
-    group: old.group,
-    tags: old.tags,
-    favorite: !!old.favorite,
-    pinned: !!old.pinned,
-    addedAt: old.addedAt,
-    updatedAt: old.updatedAt,
-    lastLaunchedAt: old.lastLaunched,
-    launchCount: old.lastLaunched ? 1 : 0,
+    id: old.id || old.Id,
+    userId: old.userId ?? old.UserId ?? old.userid,
+    username: old.username ?? old.Username,
+    displayName: old.displayName ?? old.DisplayName,
+    nickname: old.nickname ?? old.Nickname ?? old.alias ?? old.Alias,
+    notes: old.notes ?? old.Notes ?? old.comment ?? old.Comment ?? old.description ?? old.Description,
+    group: old.group ?? old.Group,
+    tags: old.tags ?? old.Tags,
+    favorite: !!(old.favorite || old.Favorite),
+    pinned: !!(old.pinned || old.Pinned),
+    addedAt: old.addedAt ?? old.AddedAt,
+    updatedAt: old.updatedAt ?? old.UpdatedAt,
+    lastLaunchedAt: lastLaunch,
+    launchCount: lastLaunch ? (old.launchCount ?? old.LaunchCount ?? 1) : 0,
     // Old builds wrote status:'active' even for imported, never-checked
     // accounts, so only a recorded ban is trusted; the rest is re-checked.
-    profile: { isBanned: old.status === 'banned' ? true : null, created: null, fetchedAt: null },
+    profile: { isBanned: (old.status === 'banned' || old.Status === 'banned') ? true : null, created: null, fetchedAt: null },
     presence: null,
-    session: { status: hasAnySecret ? (old.cookieExpired ? 'expired' : 'unknown') : 'none', checkedAt: null },
+    session: { status: hasAnySecret ? ((old.cookieExpired || old.CookieExpired) ? 'expired' : 'unknown') : 'none', checkedAt: null },
     hasCustomIcon: false,
   });
   if (!account) return null;

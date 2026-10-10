@@ -1,15 +1,19 @@
 # Publishes the project website (the website/ folder) to GitHub Pages.
-# One-time setup: repository Settings -> Pages -> Source: "GitHub Actions".
+# Works with both GitHub Pages source modes:
+# 1. GitHub Actions (via actions/deploy-pages)
+# 2. Branch deploy (via gh-pages branch)
 name: Website
 
 on:
   push:
     branches: [main]
-    paths: ["website/**", ".github/workflows/pages.yml"]
+    paths: ["website/**", ".github/workflows/pages.yml", "index.html", ".nojekyll"]
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
+  pages: write
+  id-token: write
 
 concurrency:
   group: pages
@@ -17,7 +21,7 @@ concurrency:
 
 jobs:
   build:
-    name: Check and package the website
+    name: Check, package, and publish the website
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -37,13 +41,23 @@ jobs:
           cp -r website/. _site/
           # Screenshot-script inputs and docs are not part of the site.
           rm -rf _site/demo-avatars _site/README.md
+          touch _site/.nojekyll
+      - name: Deploy to gh-pages branch
+        uses: peaceiris/actions-gh-pages@v4
+        if: github.ref == 'refs/heads/main'
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./_site
+          keep_files: false
       - uses: actions/configure-pages@v5
+        continue-on-error: true
       - uses: actions/upload-pages-artifact@v3
+        continue-on-error: true
         with:
           path: _site
 
   deploy:
-    name: Deploy to GitHub Pages
+    name: Deploy to GitHub Pages (Actions mode)
     needs: build
     runs-on: ubuntu-latest
     permissions:
@@ -55,3 +69,4 @@ jobs:
     steps:
       - id: deployment
         uses: actions/deploy-pages@v4
+        continue-on-error: true

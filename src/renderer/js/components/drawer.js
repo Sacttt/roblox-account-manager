@@ -185,6 +185,17 @@ function renderTags() {
 }
 
 function renderDynamic(a) {
+  if (!mounted || !mounted.el) return;
+  const active = document.activeElement;
+  let focusSelector = null;
+  if (mounted.el.contains(active)) {
+    if (active.dataset && active.dataset.d) {
+      focusSelector = `[data-d="${active.dataset.d}"]`;
+    } else if (active.id) {
+      focusSelector = `#${active.id}`;
+    }
+  }
+
   const q = (s) => mounted.el.querySelector(s);
   const p = presenceInfo(a);
   q('[data-head]').innerHTML = `
@@ -230,6 +241,11 @@ function renderDynamic(a) {
 
   q('[data-icon]').innerHTML = `<button class="btn sm" data-d="pick-icon">${icon('image', 'sm')}${a.hasCustomIcon ? 'Change custom icon' : 'Use a custom icon'}</button>
     ${a.hasCustomIcon ? `<button class="btn sm ghost" data-d="clear-icon">Use Roblox avatar</button>` : '<span class="faint">Shown instead of the Roblox avatar in this app.</span>'}`;
+
+  if (focusSelector) {
+    const elToFocus = mounted.el.querySelector(focusSelector);
+    if (elToFocus) elToFocus.focus();
+  }
 }
 
 async function onClick(e) {

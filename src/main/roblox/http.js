@@ -215,14 +215,32 @@ class RobloxHttp {
       }
       const lib = url.protocol === 'http:' ? http : https;
       let deadline = null;
-      const fail = (code) => { clearTimeout(deadline); reject(new RobloxError(code)); };
+      let settled = false;
+      const fail = (code) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(deadline);
+        reject(new RobloxError(code));
+      };
+      const succeed = (val) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(deadline);
+        resolve(val);
+      };
       const req = lib.get(url, { headers: { 'User-Agent': BROWSER_UA } }, (res) => {
         if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
           res.resume();
-          clearTimeout(deadline);
-          if (redirects >= 3) { reject(new RobloxError('TOO_MANY_REDIRECTS')); return; }
-          const next = new URL(res.headers.location, url).toString();
-          this.getBuffer(next, { allowedHostSuffixes, maxBytes, redirects: redirects + 1, timeoutMs }).then(resolve, reject);
+          if (redirects >= 3) { fail('TOO_MANY_REDIRECTS'); return; }
+          let next;
+          try {
+            next = new URL(res.headers.location, url).toString();
+          } catch (_) {
+            fail('BAD_URL');
+            return;
+          }
+          this.getBuffer(next, { allowedHostSuffixes, maxBytes, redirects: redirects + 1, timeoutMs })
+            .then(succeed, fail);
           return;
         }
         if (res.statusCode !== 200) { res.resume(); fail(`HTTP_${res.statusCode}`); return; }
@@ -233,7 +251,7 @@ class RobloxHttp {
           if (size > maxBytes) { req.destroy(); fail('TOO_LARGE'); return; }
           chunks.push(c);
         });
-        res.on('end', () => { clearTimeout(deadline); resolve(Buffer.concat(chunks)); });
+        res.on('end', () => { succeed(Buffer.concat(chunks)); });
       });
       req.on('error', () => fail('NETWORK_ERROR'));
       deadline = setTimeout(() => { req.destroy(); fail('TIMEOUT'); }, timeoutMs);

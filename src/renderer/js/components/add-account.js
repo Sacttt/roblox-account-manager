@@ -119,8 +119,17 @@ export function openAddAccount({ method = 'web' } = {}) {
     e.currentTarget.innerHTML = `${icon(masked ? 'eye' : 'eyeOff', 'sm')}<span>${masked ? 'Show' : 'Hide'}</span>`;
   });
   let debounce = null;
-  cookieInput.addEventListener('input', () => { clearTimeout(debounce); debounce = setTimeout(verify, 400); });
-  cookieInput.addEventListener('paste', () => { clearTimeout(debounce); setTimeout(verify, 30); });
+  let pasted = false;
+  cookieInput.addEventListener('paste', () => {
+    pasted = true;
+    clearTimeout(debounce);
+    debounce = setTimeout(() => { pasted = false; verify(); }, 50);
+  });
+  cookieInput.addEventListener('input', () => {
+    if (pasted) return;
+    clearTimeout(debounce);
+    debounce = setTimeout(verify, 400);
+  });
 
   const org = () => ({ nickname: $('#add-nick').value.trim(), group: $('#add-group').value.trim() });
 

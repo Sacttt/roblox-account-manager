@@ -21,6 +21,7 @@ class LaunchService extends EventEmitter {
     super();
     Object.assign(this, { app, shell, accounts, api, multi, getSettings, dataDir, activity, log, testSink });
     this.job = null;
+    this.starting = false;
   }
 
   status() {
@@ -42,16 +43,21 @@ class LaunchService extends EventEmitter {
   }
 
   /** Checks everything that can be checked before any account is touched. */
-  async preflight(ids, target, { force }) {
+  async preflight(ids, target, { force, internal = false } = {}) {
     if (!Array.isArray(ids) || !ids.length) throw new Error('NO_ACCOUNTS');
     if (ids.length > MAX_BATCH) throw new Error('TOO_MANY_ACCOUNTS');
-    if (this.job) throw new Error('LAUNCH_BUSY');
+    if (this.job || (!internal && this.starting)) throw new Error('LAUNCH_BUSY');
 
     const parsed = parseGameTarget(target);
     if (parsed.error) throw new Error(parsed.error);
 
     const accs = ids.map((id) => this.accounts.get(id));
-    if (accs.some((a) => !a)) throw new Error('NOT_FOUND');
+    if (accs.some((a) => !a)) {
+      const missing = ids.filter((id) => !this.accounts.get(id));
+      const err = new Error('NOT_FOUND');
+      err.accounts = missing;
+      throw err;
+    }
     const missing = accs.filter((a) => !this.accounts.vault.has(a.id));
     if (missing.length) {
       const err = new Error('NO_SESSION');
@@ -82,8 +88,18 @@ class LaunchService extends EventEmitter {
   }
 
   async launch({ ids, target, force = false }) {
-    const { parsed, accs, launcher, settings } = await this.preflight(ids, target, { force });
+    if (this.job || this.starting) throw new Error('LAUNCH_BUSY');
+    this.starting = true;
+    let preflightRes;
+    try {
+      preflightRes = await this.preflight(ids, target, { force, internal: true });
+    } catch (err) {
+      this.starting = false;
+      throw err;
+    }
+    const { parsed, accs, launcher, settings } = preflightRes;
     this.job = { id: crypto.randomBytes(4).toString('hex'), total: accs.length, done: 0, currentId: null, cancelled: false, target: describeTarget(parsed) };
+    this.starting = false;
     const results = [];
     const delayMs = Math.max(2, Number(settings.launchDelaySec) || 6) * 1000;
 
