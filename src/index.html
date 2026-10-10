@@ -45,7 +45,7 @@
       <div class="nav-group">
         <button class="nav-item active" data-view="dashboard">
           <span class="nav-icon">&#9635;</span>
-          <span class="nav-label">Dashboard</span>
+          <span class="nav-label">All Accounts</span>
           <span class="nav-badge" id="badge-total">0</span>
         </button>
         <button class="nav-item" data-view="favorites">
@@ -62,6 +62,9 @@
           <span class="nav-label">Settings</span>
         </button>
       </div>
+
+      <div class="nav-section-title" id="groups-section-title" hidden>GROUPS</div>
+      <div class="nav-group" id="groups-nav-group"></div>
 
       <!-- Quick Live Stats Panel -->
       <div class="sidebar-presence-box">
@@ -122,6 +125,14 @@
           <p id="view-subtitle" class="view-subtitle">Select accounts to launch individually or join games together.</p>
         </div>
         <div class="view-header-right">
+          <div class="view-mode-toggle">
+            <button class="vm-btn active" id="vm-grid-btn" title="Grid View">
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="1" width="6" height="6" rx="1.5"/><rect x="9" y="1" width="6" height="6" rx="1.5"/><rect x="1" y="9" width="6" height="6" rx="1.5"/><rect x="9" y="9" width="6" height="6" rx="1.5"/></svg>
+            </button>
+            <button class="vm-btn" id="vm-compact-btn" title="Compact List View">
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="2" width="14" height="2.5" rx="1.25"/><rect x="1" y="6.75" width="14" height="2.5" rx="1.25"/><rect x="1" y="11.5" width="14" height="2.5" rx="1.25"/></svg>
+            </button>
+          </div>
           <button class="btn ghost small" id="toggle-select-all-btn">Select All</button>
           <div class="glass-pill" id="active-filter-pill">
             <span class="pill-dot"></span>
