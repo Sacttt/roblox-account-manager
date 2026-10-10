@@ -14,8 +14,8 @@ function tempDir(name) {
   return fs.mkdtempSync(path.join(os.tmpdir(), `ram-e2e-${name}-`));
 }
 
-async function startMock() {
-  const mock = createMockRoblox();
+async function startMock(options = {}) {
+  const mock = createMockRoblox(options);
   const origin = await mock.listen();
   return { mock, origin };
 }

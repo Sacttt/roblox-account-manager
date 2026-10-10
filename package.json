@@ -40,7 +40,7 @@
   "build": {
     "appId": "com.local.robloxaccountmanager",
     "productName": "Roblox Account Manager",
-    "copyright": "Copyright \u00a9 2024-2026 Sacttt. MIT License.",
+    "copyright": "Copyright \u00a9 2026 Sacttt. MIT License.",
     "directories": {
       "output": "dist",
       "buildResources": "build"

@@ -81,7 +81,7 @@ function avatarPng([r, g, b], size = 96) {
   ]);
 }
 
-function createMockRoblox({ users = DEFAULT_USERS } = {}) {
+function createMockRoblox({ users = DEFAULT_USERS, avatarImages = new Map() } = {}) {
   const state = {
     users: new Map(users.map((u) => [u.id, { isBanned: false, ...u }])),
     validCookies: new Map(users.map((u) => [cookieFor(u.id), u.id])),
@@ -141,7 +141,7 @@ function createMockRoblox({ users = DEFAULT_USERS } = {}) {
       const u = state.users.get(id);
       if (!u) { res.writeHead(404); res.end(); return; }
       res.writeHead(200, { 'content-type': 'image/png' });
-      res.end(avatarPng(u.color || [120, 120, 140]));
+      res.end(avatarImages.get(id) || avatarPng(u.color || [120, 120, 140]));
       return;
     }
 
