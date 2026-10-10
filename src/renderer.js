@@ -11,6 +11,8 @@ let addTab = 'cookie';          // 'cookie' | 'web'
 let cookieValidated = null;     // holds validated cookie info before saving
 let cookieVisible = false;
 let selectedAccountIds = new Set();
+let viewMode = (() => { try { return localStorage.getItem('ram_view_mode') || 'grid'; } catch(_) { return 'grid'; } })();
+let currentGroup = null;
 
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => Array.from(document.querySelectorAll(sel));
@@ -149,13 +151,14 @@ function renderPresets() {
 function getFiltered() {
   let list = [...accounts];
 
-  // Dashboard: Show favorites and recently used (not a full list)
-  if (currentView === 'dashboard') {
-    const fav = list.filter(a => a.favorite);
-    const recent = list.filter(a => !a.favorite).sort((a, b) => (b.lastLaunched || 0) - (a.lastLaunched || 0)).slice(0, 6);
-    list = [...fav, ...recent];
-  } else if (currentView === 'favorites') {
+  // Show all accounts on dashboard; filter to only favorites on favorites view
+  if (currentView === 'favorites') {
     list = list.filter(a => a.favorite);
+  }
+
+  // Group filter
+  if (currentGroup) {
+    list = list.filter(a => (a.group || '') === currentGroup);
   }
 
   if (searchQuery) {
@@ -164,7 +167,8 @@ function getFiltered() {
       (a.username && a.username.toLowerCase().includes(q)) ||
       (a.displayName && a.displayName.toLowerCase().includes(q)) ||
       (a.nickname && a.nickname.toLowerCase().includes(q)) ||
-      (a.notes && a.notes.toLowerCase().includes(q))
+      (a.notes && a.notes.toLowerCase().includes(q)) ||
+      (a.group && a.group.toLowerCase().includes(q))
     );
   }
 
@@ -296,11 +300,14 @@ function render() {
   if (statLastSync) statLastSync.textContent = lastSync ? `Synced ${timeAgo(lastSync)}` : 'Not synced yet';
 
   const titleMap = {
-    dashboard: ['Dashboard', 'Select accounts to launch individually or join games together.'],
+    dashboard: ['All Accounts', 'Manage, launch, and track all your Roblox accounts.'],
     favorites: ['Starred Favorites', 'Priority accounts pinned and bookmarked for rapid access.'],
     settings: ['Settings', 'Preferences, launch configurations, and local backup storage.'],
     themes: ['Themes', 'Appearance, seasonal identity, RGB lighting, and custom themes.']
   };
+
+  // Update groups nav in sidebar
+  renderGroupsNav();
 
   const viewTitleWrap = $('#view-title-wrap');
   const gameLauncherPanel = $('#game-launcher-panel');
@@ -332,8 +339,8 @@ function render() {
   const viewSubtitle = $('#view-subtitle');
   const activeCountText = $('#active-count-text');
 
-  if (viewTitle) viewTitle.textContent = titleMap[currentView][0];
-  if (viewSubtitle) viewSubtitle.textContent = titleMap[currentView][1];
+  if (viewTitle) viewTitle.textContent = currentGroup ? `Group: ${currentGroup}` : titleMap[currentView][0];
+  if (viewSubtitle) viewSubtitle.textContent = currentGroup ? `Showing accounts in the "${currentGroup}" group.` : titleMap[currentView][1];
 
   const list = getFiltered();
   if (activeCountText) activeCountText.textContent = `${list.length} ${list.length === 1 ? 'account' : 'accounts'}`;
@@ -364,10 +371,17 @@ function render() {
     return;
   }
 
+  // Update view mode toggle button state
+  const vmGrid = document.getElementById('vm-grid-btn');
+  const vmCompact = document.getElementById('vm-compact-btn');
+  if (vmGrid) vmGrid.classList.toggle('active', viewMode === 'grid');
+  if (vmCompact) vmCompact.classList.toggle('active', viewMode === 'compact');
+
   if (emptyState) emptyState.hidden = true;
   if (accountGrid) {
     accountGrid.hidden = false;
-    accountGrid.innerHTML = list.map((a, i) => cardHTML(a, i)).join('');
+    accountGrid.className = `grid${viewMode === 'compact' ? ' grid-compact' : ''}`;
+    accountGrid.innerHTML = list.map((a, i) => viewMode === 'compact' ? compactCardHTML(a, i) : cardHTML(a, i)).join('');
     hydrateAvatars();
 
     // Attach card event listeners
@@ -444,7 +458,10 @@ function cardHTML(a, i) {
           <div class="card-nick" title="${escapeHTML(name)}">${escapeHTML(name)}</div>
           ${hasCookie ? '<span class="card-cookie-badge">⚡ Auto-Login</span>' : ''}
         </div>
-        <div class="card-username">@${escapeHTML(a.username)}</div>
+        <div class="card-username" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+          <span>@${escapeHTML(a.username)}</span>
+          ${a.group ? `<span class="group-tag" title="Group: ${escapeHTML(a.group)}">${escapeHTML(a.group)}</span>` : ''}
+        </div>
       </div>
     </div>
     <div class="card-meta">
@@ -458,6 +475,85 @@ function cardHTML(a, i) {
       </button>
     </div>
   </div>`;
+}
+
+function compactCardHTML(a, i) {
+  const name = a.nickname || a.displayName || a.username;
+  const pres = getPresenceInfo(a);
+  const hasCookie = !!a.roblosecurity;
+  const isSelected = selectedAccountIds.has(a.id);
+  const letterSrc = staticAvatarSrc(a);
+  const avatarSrc = a.customAvatar || a.avatarUrl || letterSrc;
+
+  return `
+  <div class="card card-compact ${isSelected ? 'selected' : ''}${a.noDecor ? ' no-decor' : ''}" data-id="${a.id}">
+    <button type="button" class="card-select-checkbox compact-check" aria-label="${isSelected ? 'Deselect' : 'Select'}">${isSelected ? '&#10003;' : ''}</button>
+    <div class="compact-avatar-wrap">
+      ${(a.customAvatar || a.avatarUrl) ? '<div class="avatar-skel compact-skel"></div>' : ''}
+      <img class="avatar compact-avatar${(a.customAvatar || a.avatarUrl) ? '' : ' loaded'}" src="${avatarSrc}" data-userId="${a.userId}" data-letter="${letterSrc}" alt="" draggable="false" />
+      <span class="presence-dot compact-pres-dot ${pres.dotClass}" title="${escapeHTML(pres.text)}"></span>
+      ${a.pinned ? '<span class="compact-pin" title="Pinned">📌</span>' : ''}
+    </div>
+    <div class="compact-info">
+      <div class="compact-name">
+        ${escapeHTML(name)}
+        ${hasCookie ? '<span class="card-cookie-badge">⚡</span>' : ''}
+        ${a.group ? `<span class="group-tag">${escapeHTML(a.group)}</span>` : ''}
+      </div>
+      <div class="compact-meta">@${escapeHTML(a.username)} &nbsp;·&nbsp; ${escapeHTML(pres.text)}</div>
+    </div>
+    <div class="compact-actions">
+      <button type="button" class="fav-star ${a.favorite ? 'active' : ''}" aria-label="${a.favorite ? 'Remove favorite' : 'Add favorite'}">${a.favorite ? '★' : '☆'}</button>
+      <button class="btn primary small launch-btn btn-glow" title="${hasCookie ? 'Instant auto-login launch' : 'Launch'}">⚡</button>
+    </div>
+  </div>`;
+}
+
+/* ---------------- Groups Nav ---------------- */
+function renderGroupsNav() {
+  const titleEl = document.getElementById('groups-section-title');
+  const groupsEl = document.getElementById('groups-nav-group');
+  if (!titleEl || !groupsEl) return;
+
+  const groups = [...new Set(accounts.map(a => a.group).filter(Boolean))].sort();
+  const hasGroups = groups.length > 0;
+
+  titleEl.hidden = !hasGroups;
+  if (!hasGroups) {
+    groupsEl.innerHTML = '';
+    return;
+  }
+
+  groupsEl.innerHTML = groups.map(g => {
+    const count = accounts.filter(a => a.group === g).length;
+    const isActive = currentGroup === g;
+    return `<button class="nav-item${isActive ? ' active' : ''}" data-group="${escapeHTML(g)}">
+      <span class="nav-icon">&#11036;</span>
+      <span class="nav-label">${escapeHTML(g)}</span>
+      <span class="nav-badge">${count}</span>
+    </button>`;
+  }).join('');
+
+  // Bind click events
+  groupsEl.querySelectorAll('[data-group]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const g = btn.dataset.group;
+      if (currentGroup === g) {
+        currentGroup = null;
+      } else {
+        currentGroup = g;
+        currentView = 'dashboard';
+        document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+        document.querySelector('.nav-item[data-view="dashboard"]')?.classList.add('active');
+      }
+      render();
+    });
+  });
+
+  // Clear group filter if current group no longer exists
+  if (currentGroup && !groups.includes(currentGroup)) {
+    currentGroup = null;
+  }
 }
 
 /* ---------------- Multi-Select Management ---------------- */
@@ -1134,12 +1230,20 @@ function openContextMenu(x, y, id) {
   const menu = $('#context-menu');
   if (!menu) return;
 
+  const allGroups = [...new Set(accounts.map(acc => acc.group).filter(Boolean))].sort();
+  const groupMenuItems = allGroups.length > 0
+    ? allGroups.map(g => `<button data-a="setgroup" data-group="${escapeHTML(g)}">${a.group === g ? '✓ ' : ''}${escapeHTML(g)}</button>`).join('')
+    : '';
+
   menu.innerHTML = `
     <button data-a="launch">&#9654; Launch Account</button>
     <button data-a="profile">&#8599; Open Roblox Profile</button>
     <button data-a="detail">&#9881; View &amp; Edit Details</button>
+    <hr />
     <button data-a="pin">${a.pinned ? '&#128204; Unpin from Top' : '&#128204; Pin to Top'}</button>
     <button data-a="fav">${a.favorite ? '&#9734; Remove Favorite' : '&#9733; Add Favorite'}</button>
+    <button data-a="group">&#11036; ${a.group ? `Group: ${escapeHTML(a.group)} &#9998;` : 'Assign to Group...'}</button>
+    ${a.group ? '<button data-a="cleargroup">&#10006; Remove from Group</button>' : ''}
     <button data-a="refresh">&#8635; Refresh Profile</button>
     <button data-a="decor">${a.noDecor ? '&#10052; Enable Seasonal Decor' : '&#10052; Disable Seasonal Decor'}</button>
     <hr />
@@ -1175,6 +1279,29 @@ function openContextMenu(x, y, id) {
         render();
       }
       if (act === 'remove') confirmRemove(id);
+      if (act === 'group') {
+        const name = await askText('Assign to Group', a.group || '');
+        if (name !== null) {
+          const g = name.trim();
+          const u = await window.api.updateAccount(id, { group: g || null });
+          Object.assign(a, u);
+          render();
+          toast(g ? `Assigned to group: ${g}` : 'Removed from group', 'success');
+        }
+      }
+      if (act === 'cleargroup') {
+        const u = await window.api.updateAccount(id, { group: null });
+        Object.assign(a, u);
+        render();
+        toast('Removed from group', 'info');
+      }
+      if (act === 'setgroup') {
+        const g = b.dataset.group;
+        const u = await window.api.updateAccount(id, { group: g });
+        Object.assign(a, u);
+        render();
+        toast(`Moved to group: ${g}`, 'success');
+      }
     };
   });
 }
@@ -1274,11 +1401,30 @@ function bindEvents() {
   if (winClose) winClose.addEventListener('click', () => window.api.closeWindow());
 
   // Navigation
-  $$('.nav-item').forEach(n => n.addEventListener('click', () => {
+  $$('.nav-item[data-view]').forEach(n => n.addEventListener('click', () => {
     currentView = n.dataset.view;
+    currentGroup = null;
     setActiveNav(currentView);
     render();
   }));
+
+  // View mode toggle
+  const vmGridBtn = document.getElementById('vm-grid-btn');
+  const vmCompactBtn = document.getElementById('vm-compact-btn');
+  if (vmGridBtn) {
+    vmGridBtn.addEventListener('click', () => {
+      viewMode = 'grid';
+      try { localStorage.setItem('ram_view_mode', 'grid'); } catch(_) {}
+      render();
+    });
+  }
+  if (vmCompactBtn) {
+    vmCompactBtn.addEventListener('click', () => {
+      viewMode = 'compact';
+      try { localStorage.setItem('ram_view_mode', 'compact'); } catch(_) {}
+      render();
+    });
+  }
 
   // Search & Filter
   const searchInput = $('#search-input');
