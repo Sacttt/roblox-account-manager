@@ -46,8 +46,15 @@ class RobloxHttp {
     this.perHost = perHostConcurrency;
     this.semaphores = new Map();
     this.inflight = new Map();
+    this.cooldownUntil = new Map(); // host -> epoch ms; shared by every caller after a 429
     this.csrfTokens = new Map(); // sha256(cookie) -> token
     this.stats = { requests: 0, failures: 0, rateLimited: 0, lastError: null, lastErrorAt: null };
+  }
+
+  async waitForCooldown(host) {
+    const until = this.cooldownUntil.get(host) || 0;
+    const wait = until - Date.now();
+    if (wait > 0) await sleep(Math.min(wait, 30000));
   }
 
   semaphore(host) {
@@ -81,6 +88,7 @@ class RobloxHttp {
     for (;;) {
       let res;
       try {
+        await this.waitForCooldown(opts.host);
         res = await this.semaphore(opts.host).run(() => this.once({ ...opts, csrfToken }));
       } catch (e) {
         if (attempt < retries && (e.code === 'NETWORK_ERROR' || e.code === 'TIMEOUT')) {
@@ -103,8 +111,9 @@ class RobloxHttp {
       if (res.status === 429) {
         this.stats.rateLimited++;
         const retryAfterMs = parseRetryAfter(res.headers['retry-after']);
-        if (attempt < Math.max(retries, 2)) {
-          await sleep(Math.min(retryAfterMs ?? backoff(attempt + 1), 10000));
+        const pause = Math.min(retryAfterMs ?? backoff(attempt + 1), 30000);
+        this.cooldownUntil.set(opts.host, Math.max(this.cooldownUntil.get(opts.host) || 0, Date.now() + pause));
+        if (attempt < Math.max(retries, 2) && pause <= 10000) {
           attempt++;
           continue;
         }
@@ -135,7 +144,13 @@ class RobloxHttp {
 
     return new Promise((resolve, reject) => {
       let settled = false;
-      const done = (fn, v) => { if (!settled) { settled = true; fn(v); } };
+      let deadline = null;
+      const done = (fn, v) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(deadline);
+        fn(v);
+      };
       const req = lib.request(url, { method, headers: reqHeaders }, (res) => {
         const chunks = [];
         let size = 0;
@@ -150,12 +165,20 @@ class RobloxHttp {
           if (text && /json/i.test(res.headers['content-type'] || '')) {
             try { json = JSON.parse(text); } catch (_) { json = undefined; }
           }
-          done(resolve, { status: res.statusCode, headers: res.headers, text, json });
+          done(resolve, {
+            status: res.statusCode,
+            headers: res.headers,
+            text,
+            json,
+            challenge: !!(res.headers['rblx-challenge-id'] || res.headers['rblx-challenge-type']),
+            newCookie: cookie ? rotatedCookie(res.headers['set-cookie'], cookie) : null,
+          });
         });
         res.on('error', () => done(reject, new RobloxError('NETWORK_ERROR')));
       });
       req.on('error', () => done(reject, new RobloxError('NETWORK_ERROR')));
-      req.setTimeout(timeoutMs, () => { req.destroy(); done(reject, new RobloxError('TIMEOUT')); });
+      // A total deadline, not just an idle timeout, so a trickling response can't hang a launch.
+      deadline = setTimeout(() => { req.destroy(); done(reject, new RobloxError('TIMEOUT')); }, timeoutMs);
       if (payload !== null) req.write(payload);
       req.end();
     });
@@ -191,26 +214,29 @@ class RobloxHttp {
         }
       }
       const lib = url.protocol === 'http:' ? http : https;
+      let deadline = null;
+      const fail = (code) => { clearTimeout(deadline); reject(new RobloxError(code)); };
       const req = lib.get(url, { headers: { 'User-Agent': BROWSER_UA } }, (res) => {
         if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
           res.resume();
+          clearTimeout(deadline);
           if (redirects >= 3) { reject(new RobloxError('TOO_MANY_REDIRECTS')); return; }
           const next = new URL(res.headers.location, url).toString();
           this.getBuffer(next, { allowedHostSuffixes, maxBytes, redirects: redirects + 1, timeoutMs }).then(resolve, reject);
           return;
         }
-        if (res.statusCode !== 200) { res.resume(); reject(new RobloxError(`HTTP_${res.statusCode}`)); return; }
+        if (res.statusCode !== 200) { res.resume(); fail(`HTTP_${res.statusCode}`); return; }
         const chunks = [];
         let size = 0;
         res.on('data', (c) => {
           size += c.length;
-          if (size > maxBytes) { req.destroy(); reject(new RobloxError('TOO_LARGE')); return; }
+          if (size > maxBytes) { req.destroy(); fail('TOO_LARGE'); return; }
           chunks.push(c);
         });
-        res.on('end', () => resolve(Buffer.concat(chunks)));
+        res.on('end', () => { clearTimeout(deadline); resolve(Buffer.concat(chunks)); });
       });
-      req.on('error', () => reject(new RobloxError('NETWORK_ERROR')));
-      req.setTimeout(timeoutMs, () => { req.destroy(); reject(new RobloxError('TIMEOUT')); });
+      req.on('error', () => fail('NETWORK_ERROR'));
+      deadline = setTimeout(() => { req.destroy(); fail('TIMEOUT'); }, timeoutMs);
     });
   }
 
@@ -219,6 +245,16 @@ class RobloxHttp {
     this.stats.lastError = code;
     this.stats.lastErrorAt = Date.now();
   }
+}
+
+/** Roblox can rotate the session cookie in a Set-Cookie header; return the new value if so. */
+function rotatedCookie(setCookie, current) {
+  const list = Array.isArray(setCookie) ? setCookie : (setCookie ? [setCookie] : []);
+  for (const c of list) {
+    const m = /^\.ROBLOSECURITY=([^;]+)/i.exec(String(c).trim());
+    if (m && m[1] && m[1] !== current && m[1].length >= 50 && /^[\x21-\x7E]+$/.test(m[1]) && !/[;,]/.test(m[1])) return m[1];
+  }
+  return null;
 }
 
 function backoff(attempt) {

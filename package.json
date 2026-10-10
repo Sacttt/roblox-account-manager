@@ -1,55 +1,96 @@
 {
   "name": "roblox-account-manager",
-  "version": "1.0.0",
-  "description": "A polished, local desktop manager for organizing your own Roblox accounts.",
-  "main": "main.js",
-  "author": "You",
+  "version": "2.0.0",
+  "description": "Free, open-source Windows app for organizing your own Roblox accounts and launching them signed in — one at a time or several at once.",
+  "main": "src/main/index.js",
+  "author": "Sacttt",
   "license": "MIT",
+  "homepage": "https://github.com/Sacttt/roblox-account-manager",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Sacttt/roblox-account-manager.git"
+  },
+  "private": true,
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "start": "electron .",
-    "build": "electron-builder --win nsis --publish never",
-    "release": "electron-builder --win nsis --publish always"
+    "lint": "eslint .",
+    "test": "npm run lint && npm run test:unit && npm run test:e2e",
+    "test:unit": "node --test \"test/unit/*.test.js\"",
+    "test:e2e": "node test/e2e/run.js",
+    "build": "electron-builder --win --x64 --publish never",
+    "build:installer": "electron-builder --win nsis --x64 --publish never",
+    "build:portable": "electron-builder --win portable --x64 --publish never",
+    "release": "electron-builder --win --x64 --publish always",
+    "icon": "node scripts/generate-icon.js"
   },
   "dependencies": {
-    "electron-updater": "^6.3.9"
+    "electron-updater": "^6.8.9"
   },
   "devDependencies": {
-    "electron": "^31.0.0",
-    "electron-builder": "^24.13.3"
+    "@eslint/js": "^9.39.5",
+    "electron": "^44.5.0",
+    "electron-builder": "^26.15.3",
+    "eslint": "^9.39.5",
+    "globals": "^16.5.0",
+    "playwright-core": "~1.56.1"
   },
   "build": {
     "appId": "com.local.robloxaccountmanager",
     "productName": "Roblox Account Manager",
+    "copyright": "Copyright © 2024-2026 Sacttt. MIT License.",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
     "files": [
-      "main.js",
-      "multiroblox.js",
-      "updater.js",
-      "preload.js",
       "src/**/*",
-      "!**/*.bat",
-      "!**/generate_icon.js",
-      "!**/*.md",
-      "!**/dev-app-update.yml",
-      "!**/.github"
+      "assets/**/*",
+      "package.json"
     ],
+    "asar": true,
     "win": {
-      "target": "nsis",
-      "icon": "src/icon.ico"
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "assets/icon.ico",
+      "requestedExecutionLevel": "asInvoker"
     },
     "nsis": {
       "oneClick": false,
       "perMachine": false,
       "allowToChangeInstallationDirectory": true,
       "deleteAppDataOnUninstall": false,
-      "artifactName": "${productName}-Setup-${version}.${ext}"
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Roblox Account Manager",
+      "uninstallDisplayName": "Roblox Account Manager",
+      "installerIcon": "assets/icon.ico",
+      "uninstallerIcon": "assets/icon.ico",
+      "installerHeaderIcon": "assets/icon.ico",
+      "runAfterFinish": true,
+      "artifactName": "RobloxAccountManager-Setup-${version}.${ext}"
+    },
+    "portable": {
+      "artifactName": "RobloxAccountManager-Portable-${version}.${ext}"
     },
     "publish": {
       "provider": "github",
       "owner": "Sacttt",
       "repo": "roblox-account-manager"
-    },
-    "directories": {
-      "output": "dist"
     }
   }
 }

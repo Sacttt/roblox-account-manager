@@ -55,8 +55,6 @@ export function mount(root) {
   });
   host.addEventListener('click', onClick);
 
-  let diagCache = null;
-
   function render() {
     root.querySelectorAll('[data-section]').forEach((b) => b.classList.toggle('active', b.dataset.section === state.settingsSection));
     const s = state.settings;
@@ -182,7 +180,6 @@ export function mount(root) {
   async function loadDiagnostics() {
     try {
       const d = await call('diag:collect');
-      diagCache = d;
       const grid = host.querySelector('[data-diag]');
       if (!grid) return;
       const items = [

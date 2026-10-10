@@ -51,6 +51,7 @@ export function presenceInfo(a) {
     1: ['online', 'Online'],
     2: ['ingame', p.lastLocation ? `Playing ${p.lastLocation}` : 'In game'],
     3: ['studio', 'In Roblox Studio'],
+    4: ['offline', 'Invisible'],
   };
   const [cls, text] = map[p.type] || ['unknown', 'Status unknown'];
   return { cls, text, title: `${text} — reported by Roblox ${asOf}`, stale, asOf };
@@ -72,7 +73,7 @@ export function sessionInfo(a) {
 }
 
 export function needsAttention(a) {
-  return a.session.status === 'expired' || a.session.status === 'none' || a.profile.isBanned === true;
+  return a.session.status === 'expired' || a.session.status === 'none' || a.profile.isBanned === true || a.profile.notFound === true;
 }
 
 export function canLaunch(a) {

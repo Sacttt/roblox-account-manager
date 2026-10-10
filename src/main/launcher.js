@@ -103,7 +103,11 @@ class LaunchService extends EventEmitter {
         const isLast = i === accs.length - 1;
         if (!isLast && r.ok && !this.job.cancelled) {
           this.emitProgress({ accountId: a.id, stage: 'waiting' });
-          await this.waitForClient(r.pidsBefore, 25000);
+          const seen = await this.waitForClient(r.pidsBefore, 25000);
+          if (!seen && !this.job.cancelled) {
+            r.windowSeen = false;
+            this.log.warn(`no new Roblox window appeared for ${a.id} within 25s`);
+          }
           await this.sleepUnlessCancelled(delayMs);
         }
       }
@@ -131,7 +135,9 @@ class LaunchService extends EventEmitter {
       if (!cookie) throw new Error('NO_SESSION');
       let ticket;
       try {
-        ticket = await this.api.getAuthTicket(cookie);
+        const r = await this.api.getAuthTicket(cookie);
+        ticket = r.ticket;
+        if (r.cookie !== cookie) this.accounts.updateSecret(account.id, r.cookie);
       } catch (e) {
         if (e.code === 'COOKIE_INVALID') this.accounts.markSessionExpired(account.id);
         throw e;

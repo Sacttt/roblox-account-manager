@@ -200,7 +200,9 @@ export function mount(root) {
     if (n) {
       const ids = [...state.selection];
       const allFav = ids.every((id) => state.accounts.get(id) && state.accounts.get(id).favorite);
-      bar.innerHTML = `<span class="count">${n} selected</span>
+      const visible = new Set(visibleIds);
+      const hidden = ids.filter((id) => !visible.has(id)).length;
+      bar.innerHTML = `<span class="count">${n} selected${hidden ? ` <span class="faint" title="Some selected accounts are hidden by the current search or filters; bulk actions include them.">· ${hidden} hidden</span>` : ''}</span>
         <button class="btn sm primary" data-bulk-action="launch" ${state.launch.busy ? 'disabled' : ''}>${icon('play', 'sm')}Launch together</button>
         <span class="sep"></span>
         <button class="btn sm ghost" data-bulk-action="favorite">${icon('star', 'sm')}${allFav ? 'Unfavorite' : 'Favorite'}</button>

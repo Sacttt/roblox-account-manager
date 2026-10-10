@@ -56,8 +56,12 @@ function detectLaunchers(app, { force = false } = {}) {
 /** Resolves the user's launcher preference to a concrete launcher. */
 function resolveLauncher(choice, found) {
   if (choice === 'auto') {
+    // Whatever is registered for roblox-player:// (official, Bloxstrap or
+    // Fishstrap) is what the user chose most recently, so prefer it.
+    if (found.protocolHandler) return { kind: 'default' };
     if (found.bloxstrap) return { kind: 'bloxstrap', exe: found.bloxstrap };
     if (found.fishstrap) return { kind: 'fishstrap', exe: found.fishstrap };
+    if (found.client) return { kind: 'client', exe: found.client };
     return { kind: 'default' };
   }
   if (choice === 'default') return { kind: 'default' };

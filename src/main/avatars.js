@@ -54,7 +54,7 @@ class AvatarStore {
   }
 
   /** Downloads headshots that are missing or changed. Returns userIds whose image changed. */
-  async sync(userIds, { force = false } = {}) {
+  async sync(userIds, { force = false, retryPending = true } = {}) {
     const ids = [...new Set(userIds.filter((id) => Number.isSafeInteger(id)))];
     if (!ids.length) return [];
     const urls = await this.api.getHeadshotUrls(ids);
@@ -66,7 +66,10 @@ class AvatarStore {
       try {
         const buf = await this.api.downloadImage(url);
         if (sniffImageType(buf) !== 'png') continue;
-        fs.writeFileSync(this.avatarFile(userId), buf);
+        const file = this.avatarFile(userId);
+        const tmp = `${file}.${process.pid}.tmp`;
+        fs.writeFileSync(tmp, buf);
+        fs.renameSync(tmp, file);
         this.meta[userId] = { url, fetchedAt: Date.now() };
         changed.push(userId);
       } catch (e) {
@@ -74,6 +77,12 @@ class AvatarStore {
       }
     }
     if (changed.length) this.saveMeta();
+    // Roblox renders new headshots on demand ("Pending"); ask once more shortly.
+    const pending = ids.filter((id) => !urls.has(id) && !this.avatarVersion(id));
+    if (retryPending && pending.length) {
+      await new Promise((r) => setTimeout(r, 3000));
+      try { changed.push(...await this.sync(pending, { force, retryPending: false })); } catch (_) { /* next refresh */ }
+    }
     return changed;
   }
 

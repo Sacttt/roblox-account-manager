@@ -54,7 +54,7 @@ function parseBackup(text) {
   if (typeof text !== 'string' || !text.trim()) throw new Error('INVALID_BACKUP');
   if (Buffer.byteLength(text) > MAX_BYTES) throw new Error('BACKUP_TOO_LARGE');
   let data;
-  try { data = JSON.parse(text.replace(/^﻿/, '')); } catch (_) { throw new Error('INVALID_BACKUP'); }
+  try { data = JSON.parse(text.replace(/^\uFEFF/, '')); } catch (_) { throw new Error('INVALID_BACKUP'); }
 
   const warnings = [];
   let accounts;

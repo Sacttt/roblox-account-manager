@@ -72,7 +72,8 @@ function createUpdater({ app, send, log }) {
   }
 
   async function safeCheck() {
-    if (!canCheck() || state.checking || state.downloading) return;
+    // Once an update is downloaded it installs on quit; don't prompt again.
+    if (!canCheck() || state.checking || state.downloading || state.downloaded) return;
     try { await autoUpdater.checkForUpdates(); } catch (e) { log.warn('update check failed', e.message); }
   }
 

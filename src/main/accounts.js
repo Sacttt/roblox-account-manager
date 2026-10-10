@@ -173,13 +173,22 @@ class AccountService extends EventEmitter {
   // ---------------------------------------------------------------- adding
   async previewCookie(rawCookie) {
     const cookie = normalizeCookie(rawCookie);
-    const user = await this.api.getAuthenticatedUser(cookie);
-    const existing = this.findByUserId(user.userId);
-    let avatarVersion = this.avatars.avatarVersion(user.userId);
+    const { userId, username, displayName } = await this.api.getAuthenticatedUser(cookie);
+    const existing = this.findByUserId(userId);
+    let avatarVersion = this.avatars.avatarVersion(userId);
     if (!avatarVersion) {
-      try { await this.avatars.sync([user.userId]); avatarVersion = this.avatars.avatarVersion(user.userId); } catch (_) { /* preview without image */ }
+      try { await this.avatars.sync([userId]); avatarVersion = this.avatars.avatarVersion(userId); } catch (_) { /* preview without image */ }
     }
-    return { ...user, avatarVersion, existingAccountId: existing ? existing.id : null };
+    // Only public profile fields go back to the UI — never the cookie.
+    return { userId, username, displayName, avatarVersion, existingAccountId: existing ? existing.id : null };
+  }
+
+  /** Stores a cookie value Roblox handed back (rotation) or accepted in a repaired form. */
+  updateSecret(id, cookie) {
+    const a = this.get(id);
+    if (!a || !cookie || this.vault.get(id) === cookie) return;
+    this.vault.set(id, cookie);
+    this.log.info(`stored refreshed sign-in for ${id}`);
   }
 
   /**
@@ -197,7 +206,7 @@ class AccountService extends EventEmitter {
         err.accountId = existing.id;
         throw err;
       }
-      const { persisted } = this.vault.set(existing.id, cookie);
+      const { persisted } = this.vault.set(existing.id, user.cookie);
       existing.username = user.username || existing.username;
       existing.displayName = user.displayName || existing.displayName;
       existing.session = { status: 'valid', checkedAt: Date.now() };
@@ -221,11 +230,11 @@ class AccountService extends EventEmitter {
     });
     try {
       const detail = await this.api.getUser(user.userId);
-      account.profile = { isBanned: detail.isBanned, created: detail.created, fetchedAt: Date.now() };
+      account.profile = { isBanned: detail.isBanned, created: detail.created, fetchedAt: Date.now(), notFound: false };
     } catch (e) {
       this.log.warn(`profile fetch failed for new account: ${e.code || e.message}`);
     }
-    const { persisted } = this.vault.set(account.id, cookie);
+    const { persisted } = this.vault.set(account.id, user.cookie);
     this.accounts.push(account);
     this.save();
     this.emitChanged(account);
@@ -243,7 +252,7 @@ class AccountService extends EventEmitter {
     const cookie = normalizeCookie(rawCookie);
     const user = await this.api.getAuthenticatedUser(cookie);
     if (user.userId !== a.userId) throw new Error('COOKIE_MISMATCH');
-    const { persisted } = this.vault.set(a.id, cookie);
+    const { persisted } = this.vault.set(a.id, user.cookie);
     a.session = { status: 'valid', checkedAt: Date.now() };
     a.updatedAt = Date.now();
     this.save();
@@ -291,6 +300,7 @@ class AccountService extends EventEmitter {
     try {
       const user = await this.api.getAuthenticatedUser(cookie);
       a.session = { status: user.userId === a.userId ? 'valid' : 'expired', checkedAt: Date.now() };
+      if (user.userId === a.userId && user.cookie !== cookie) this.updateSecret(a.id, user.cookie);
     } catch (e) {
       if (e.code !== 'INVALID_COOKIE') {
         this.emitChanged(a);
@@ -468,8 +478,12 @@ class AccountService extends EventEmitter {
         for (const a of stale) {
           try {
             const d = await this.api.getUser(a.userId);
-            a.profile = { isBanned: d.isBanned, created: d.created, fetchedAt: Date.now() };
+            a.profile = { isBanned: d.isBanned, created: d.created, fetchedAt: Date.now(), notFound: false };
           } catch (e) {
+            if (e.code === 'NOT_FOUND') {
+              a.profile = { ...a.profile, fetchedAt: Date.now(), notFound: true };
+              continue;
+            }
             firstError = firstError || e;
             if (e.code === 'RATE_LIMITED') break;
           }

@@ -53,6 +53,14 @@ function start() {
 
   // ---------------------------------------------------------------- settings
   const settingsRead = readJSON(paths.settings, {});
+  if (settingsRead.data && typeof settingsRead.data === 'object' && settingsRead.data.schemaVersion !== 2 && Object.keys(settingsRead.data).length) {
+    // Older settings may hold things this version no longer uses (e.g. custom
+    // themes); keep a copy so nothing a user made is lost.
+    const backupFile = paths.settings.replace(/\.json$/, '.pre-v2-backup.json');
+    if (!fs.existsSync(backupFile)) {
+      try { writeJSON(backupFile, settingsRead.data, { backup: false }); } catch (e) { log.warn('could not back up old settings', e.message); }
+    }
+  }
   let settings = settingsModel.migrate(settingsRead.data);
   if (settingsRead.source === 'backup') startupNotes.push('Settings were damaged and have been restored from a backup.');
   if (settingsRead.source === 'default' && settingsRead.recoveredFrom) startupNotes.push('Settings were damaged and have been reset to defaults.');

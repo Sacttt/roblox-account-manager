@@ -16,10 +16,11 @@ function readJSON(file, fallback) {
   let quarantined = null;
   if (primary.exists) quarantined = quarantine(file);
 
+  const extra = quarantined ? { recoveredFrom: quarantined } : {};
   const backup = tryRead(`${file}.bak`);
-  if (backup.ok) return { data: backup.data, source: 'backup', recoveredFrom: quarantined };
+  if (backup.ok) return { data: backup.data, source: 'backup', ...extra };
 
-  return { data: clone(fallback), source: 'default', recoveredFrom: quarantined };
+  return { data: clone(fallback), source: 'default', ...extra };
 }
 
 function tryRead(file) {

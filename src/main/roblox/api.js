@@ -9,6 +9,11 @@ const AUTH = 'auth.roblox.com';
 
 const IMAGE_HOSTS = ['rbxcdn.com', 'roblox.com'];
 
+// Real .ROBLOSECURITY values start with this banner. Versions before 2.0
+// stripped it when saving, so for those we retry with it put back.
+const WARNING_PREFIX = '_|WARNING:-DO-NOT-SHARE-THIS.--Sharing-this-will-allow-someone-to-log-in-as-you-and-to-steal-your-ROBUX-and-items.|_';
+const hasPrefix = (c) => /^_\|WARNING/i.test(c);
+
 /**
  * Accepts what people actually paste: the raw value, "name=value", quotes,
  * trailing semicolons or whitespace. Returns the bare cookie value or throws.
@@ -35,16 +40,26 @@ class RobloxApi {
     this.http = httpClient;
   }
 
-  /** Who does this cookie belong to? Throws INVALID_COOKIE when Roblox rejects it. */
+  /**
+   * Who does this cookie belong to? Throws INVALID_COOKIE when Roblox rejects
+   * it. Returns the cookie value Roblox accepted (it may have been rotated or
+   * had its warning banner restored) so callers can store that one.
+   */
   async getAuthenticatedUser(cookie) {
-    try {
-      const u = await this.http.json({ host: USERS, path: '/v1/users/authenticated', cookie, retries: 1 });
+    const attempt = async (c) => {
+      const res = await this.http.request({ host: USERS, path: '/v1/users/authenticated', cookie: c, retries: 1 });
+      if (res.status === 401) return null;
+      if (res.challenge) throw new RobloxError('CHALLENGE_REQUIRED', { status: res.status });
+      if (res.status === 429) throw new RobloxError('RATE_LIMITED', { status: 429 });
+      if (res.status !== 200) throw new RobloxError(`HTTP_${res.status}`, { status: res.status });
+      const u = res.json;
       if (!u || !Number.isSafeInteger(u.id)) throw new RobloxError('BAD_RESPONSE');
-      return { userId: u.id, username: String(u.name || ''), displayName: String(u.displayName || u.name || '') };
-    } catch (e) {
-      if (e.code === 'UNAUTHORIZED') throw new RobloxError('INVALID_COOKIE', { status: 401 });
-      throw e;
-    }
+      return { userId: u.id, username: String(u.name || ''), displayName: String(u.displayName || u.name || ''), cookie: res.newCookie || c };
+    };
+    let user = await attempt(cookie);
+    if (!user && !hasPrefix(cookie)) user = await attempt(WARNING_PREFIX + cookie);
+    if (!user) throw new RobloxError('INVALID_COOKIE', { status: 401 });
+    return user;
   }
 
   async getUser(userId) {
@@ -92,7 +107,7 @@ class RobloxApi {
       const now = Date.now();
       for (const p of (res && res.userPresences) || []) {
         if (!Number.isSafeInteger(p.userId)) continue;
-        const type = Number.isInteger(p.userPresenceType) && p.userPresenceType >= 0 && p.userPresenceType <= 3 ? p.userPresenceType : null;
+        const type = Number.isInteger(p.userPresenceType) && p.userPresenceType >= 0 && p.userPresenceType <= 4 ? p.userPresenceType : null;
         if (type === null) continue;
         out.set(p.userId, {
           type,
@@ -129,22 +144,29 @@ class RobloxApi {
    * roblox.com's Play button makes. Needs the CSRF handshake.
    */
   async getAuthTicket(cookie) {
-    const res = await this.http.request({
-      host: AUTH,
-      path: '/v1/authentication-ticket/',
-      method: 'POST',
-      body: {},
-      cookie,
-      csrf: true,
-      retries: 2,
-      userAgent: 'Roblox/WinInet',
-      headers: { Referer: 'https://www.roblox.com/develop', 'RBX-For-Gameauth': 'true' },
-    });
-    if (res.status === 401) throw new RobloxError('COOKIE_INVALID', { status: 401 });
-    const ticket = res.headers['rbx-authentication-ticket'];
-    if (res.status === 200 && ticket) return String(ticket);
-    if (res.status === 403) throw new RobloxError('AUTH_TICKET_DENIED', { status: 403 });
-    throw new RobloxError('AUTH_TICKET_FAILED', { status: res.status });
+    const attempt = async (c) => {
+      const res = await this.http.request({
+        host: AUTH,
+        path: '/v1/authentication-ticket/',
+        method: 'POST',
+        body: {},
+        cookie: c,
+        csrf: true,
+        retries: 2,
+        userAgent: 'Roblox/WinInet',
+        headers: { Referer: 'https://www.roblox.com/develop', 'RBX-For-Gameauth': 'true' },
+      });
+      if (res.status === 401) return null;
+      if (res.challenge) throw new RobloxError('CHALLENGE_REQUIRED', { status: res.status });
+      const ticket = res.headers['rbx-authentication-ticket'];
+      if (res.status === 200 && ticket) return { ticket: String(ticket), cookie: res.newCookie || c };
+      if (res.status === 403) throw new RobloxError('AUTH_TICKET_DENIED', { status: 403 });
+      throw new RobloxError('AUTH_TICKET_FAILED', { status: res.status });
+    };
+    let r = await attempt(cookie);
+    if (!r && !hasPrefix(cookie)) r = await attempt(WARNING_PREFIX + cookie);
+    if (!r) throw new RobloxError('COOKIE_INVALID', { status: 401 });
+    return r;
   }
 
   /** Lightweight reachability probe used by Diagnostics. */
@@ -160,4 +182,4 @@ class RobloxApi {
   }
 }
 
-module.exports = { RobloxApi, normalizeCookie, HOSTS: { USERS, PRESENCE, THUMBS, AUTH } };
+module.exports = { RobloxApi, normalizeCookie, WARNING_PREFIX, HOSTS: { USERS, PRESENCE, THUMBS, AUTH } };

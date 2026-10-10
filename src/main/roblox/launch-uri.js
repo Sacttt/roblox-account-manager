@@ -35,10 +35,13 @@ function parseGameTarget(input) {
 
   const fromPath = text.match(/roblox\.com\/(?:[a-z]{2}\/)?(?:games|experiences)\/(\d{1,15})/i);
   const fromQuery = text.match(/[?&]placeId=(\d{1,15})/i) || text.match(/placeId=(\d{1,15})/i);
+  const looksLikeLink = /:\/\/|roblox\.com/i.test(text);
   if (fromPath) placeId = fromPath[1];
   else if (fromQuery) placeId = fromQuery[1];
   else if (/^\d{1,15}$/.test(text)) placeId = text;
-  else {
+  else if (!looksLikeLink) {
+    // "<placeId> <job-guid>" style input. Links to profiles, groups etc. are
+    // rejected above rather than guessing a number out of them.
     const loose = text.replace(GUID, ' ').match(/\b(\d{4,15})\b/);
     if (loose) placeId = loose[1];
   }
@@ -58,24 +61,26 @@ function describeTarget(t) {
 /**
  * Builds the roblox-player: URI the website's Play button hands to the
  * Roblox client. The embedded one-time ticket is what makes the client sign
- * in as this specific account. The place-launcher URL is percent-encoded the
- * same way roblox.com does it.
+ * in as this specific account.
+ *
+ * This is deliberately the exact format earlier versions used (RequestGameJob
+ * with an unencoded place-launcher URL, as in evanovar/RobloxAccountManager);
+ * it is the known-working form. Change it only after testing on Windows.
  */
 function buildRobloxPlayerUri(ticket, { placeId, linkCode, jobId }, now = Date.now()) {
   if (!/^[A-Za-z0-9_\-+/=.]+$/.test(String(ticket || ''))) throw new Error('AUTH_TICKET_FAILED');
-  const tracker = String(100000000000 + crypto.randomInt(0, 899999999999));
-  let request = 'RequestGame';
-  let extra = '';
-  if (linkCode) { request = 'RequestPrivateGame'; extra = `&linkCode=${encodeURIComponent(linkCode)}`; }
-  else if (jobId) { request = 'RequestGameJob'; extra = `&gameId=${encodeURIComponent(jobId)}`; }
-  const launcher = `https://assetgame.roblox.com/game/PlaceLauncher.ashx?request=${request}`
-    + `&browserTrackerId=${tracker}&placeId=${placeId}${extra}&isPlayTogetherGame=false`;
+  if (!Number.isSafeInteger(Number(placeId))) throw new Error('GAME_TARGET_INVALID');
+  const tracker = String(1000000000000000 + crypto.randomInt(0, 2 ** 47) * 50);
+  let launcher = 'https://assetgame.roblox.com/game/PlaceLauncher.ashx?request=RequestGameJob'
+    + `&browserTrackerId=${tracker}&placeId=${Number(placeId)}&isPlayTogetherGame=false`;
+  if (linkCode && /^[A-Za-z0-9_-]{1,100}$/.test(linkCode)) launcher += `&linkCode=${linkCode}`;
+  else if (jobId && GUID.test(jobId)) launcher += `&gameId=${jobId}`;
   return [
     'roblox-player:1',
     'launchmode:play',
     `gameinfo:${ticket}`,
     `launchtime:${now}`,
-    `placelauncherurl:${encodeURIComponent(launcher)}`,
+    `placelauncherurl:${launcher}`,
     `browsertrackerid:${tracker}`,
     'robloxLocale:en_us',
     'gameLocale:en_us',

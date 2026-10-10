@@ -25,6 +25,7 @@ export function sessionBadge(a) {
 export function statusBadges(a) {
   let out = sessionBadge(a);
   if (a.profile && a.profile.isBanned === true) out += `<span class="badge red" title="Roblox reports this account as banned">${icon('alert')}Banned</span>`;
+  else if (a.profile && a.profile.notFound) out += `<span class="badge red" title="Roblox no longer has a user with this ID (deleted or terminated)">${icon('alert')}Not found</span>`;
   return out;
 }
 

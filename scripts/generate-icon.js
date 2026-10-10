@@ -68,9 +68,6 @@ function createGoldRobloxIconPNG(size) {
       // Distance to inner square hole
       const innerDist = Math.max(absX - innerRadius, absY - innerRadius);
 
-      // Shadow distance (soft glow behind)
-      const shadowDist = Math.sqrt(dx * dx + (dy - size * 0.04) * (dy - size * 0.04));
-
       let r = 0, g = 0, b = 0, a = 0;
 
       if (outerDist <= 0 && innerDist >= 0) {
@@ -180,8 +177,8 @@ const sizes = [256, 128, 64, 48, 32, 16];
 const pngs = sizes.map(s => createGoldRobloxIconPNG(s));
 const ico = generateIco(pngs, sizes);
 
-const outIcoPath = path.join(__dirname, 'src', 'icon.ico');
-const outPngPath = path.join(__dirname, 'src', 'icon.png');
+const outIcoPath = path.join(__dirname, '..', 'assets', 'icon.ico');
+const outPngPath = path.join(__dirname, '..', 'assets', 'icon.png');
 
 fs.writeFileSync(outIcoPath, ico);
 fs.writeFileSync(outPngPath, pngs[0]); // 256x256 PNG

@@ -41,7 +41,7 @@ function toTime(v) {
 
 function normalizePresence(p) {
   if (!p || typeof p !== 'object') return null;
-  const type = Number.isInteger(p.type) && p.type >= 0 && p.type <= 3 ? p.type : null;
+  const type = Number.isInteger(p.type) && p.type >= 0 && p.type <= 4 ? p.type : null;
   const fetchedAt = toTime(p.fetchedAt);
   if (type === null || !fetchedAt) return null;
   return {
@@ -79,6 +79,7 @@ function normalizeAccount(a) {
       isBanned: typeof profile.isBanned === 'boolean' ? profile.isBanned : null,
       created: typeof profile.created === 'string' ? profile.created.slice(0, 40) : null,
       fetchedAt: toTime(profile.fetchedAt),
+      notFound: profile.notFound === true,
     },
     presence: normalizePresence(a.presence),
     session: {

@@ -76,16 +76,31 @@ function listRobloxPids() {
   });
 }
 
+const taskkill = (args) => new Promise((resolve) => {
+  execFile('taskkill', args, { windowsHide: true, timeout: 15000 }, () => resolve());
+});
+
+async function waitForExit(maxMs) {
+  const end = Date.now() + maxMs;
+  while (Date.now() < end) {
+    if (!(await listRobloxPids()).length) return true;
+    await new Promise((r) => setTimeout(r, 300));
+  }
+  return false;
+}
+
+/**
+ * Asks Roblox clients to close (so they can disconnect cleanly), then forces
+ * any that remain. Returns how many clients were running.
+ */
 async function closeAllRoblox() {
   if (!isWindows()) return 0;
   const before = await listRobloxPids();
   if (!before.length) return 0;
-  await new Promise((resolve) => {
-    execFile('taskkill', ['/F', '/T', '/IM', 'RobloxPlayerBeta.exe'], { windowsHide: true, timeout: 15000 }, () => resolve());
-  });
-  for (let i = 0; i < 16; i++) {
-    if (!(await listRobloxPids()).length) break;
-    await new Promise((r) => setTimeout(r, 250));
+  await taskkill(['/IM', 'RobloxPlayerBeta.exe']);
+  if (!(await waitForExit(2500))) {
+    await taskkill(['/F', '/T', '/IM', 'RobloxPlayerBeta.exe']);
+    await waitForExit(8000);
   }
   return before.length;
 }
