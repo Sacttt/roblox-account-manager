@@ -9,7 +9,7 @@ export function navigate(view, extra = {}) {
   state.view = view;
   if (extra.settingsSection) state.settingsSection = extra.settingsSection;
   if (extra.filters) state.filters = { ...state.filters, ...extra.filters };
-  notify('view');
+  notify('view', ...(extra.filters ? ['filters'] : []));
 }
 
 export function openDetail(id) {

@@ -12,3 +12,6 @@ avatar-cache/
 # Editor/OS cruft
 .DS_Store
 Thumbs.db
+
+# Test output
+test/e2e/artifacts/

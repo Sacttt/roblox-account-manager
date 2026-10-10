@@ -59,8 +59,7 @@ function renderSidebar() {
 document.getElementById('sidebar').addEventListener('click', (e) => {
   const nav = e.target.closest('[data-nav]');
   if (nav) {
-    if (nav.dataset.nav === 'accounts') state.filters.group = '';
-    navigate(nav.dataset.nav);
+    navigate(nav.dataset.nav, nav.dataset.nav === 'accounts' ? { filters: { group: '' } } : {});
     return;
   }
   const g = e.target.closest('[data-group]');

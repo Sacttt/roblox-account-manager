@@ -66,7 +66,7 @@ export function mount(root) {
 
     host.querySelector('[data-stats]').innerHTML = [
       stat('users', 'Accounts', list.length, `${list.filter((a) => a.favorite).length} favorites`, 'all'),
-      stat('shieldCheck', 'Ready to launch', ready.length, `${list.filter((a) => a.session.status === 'valid').length} verified this session`, 'ready'),
+      stat('shieldCheck', 'Ready to launch', ready.length, `${list.filter((a) => a.session.status === 'valid').length} verified with Roblox`, 'ready'),
       stat('alert', 'Needs attention', attention.length, attention.length ? 'Expired or missing sign-ins' : 'All good', 'attention', attention.length > 0),
       stat('activity', 'Online now', newest ? online.length : '—', newest ? `Reported by Roblox ${timeAgo(newest, { short: true })}` : 'Refresh to load live status', 'online'),
     ].join('');

@@ -101,7 +101,7 @@ test('backup: v2 round trip and legacy array import', () => {
   assert.deepEqual(parsed.settings, { theme: 'light' });
   assert.deepEqual(parsed.warnings, []);
 
-  const legacy = parseBackup(`﻿${JSON.stringify([{ userId: 2, username: 'b', lastLaunched: 5, roblosecurity: 'x' }])}`);
+  const legacy = parseBackup(`\uFEFF${JSON.stringify([{ userId: 2, username: 'b', lastLaunched: 5, roblosecurity: 'x' }])}`);
   assert.equal(legacy.accounts[0].lastLaunchedAt, 5);
   assert.equal(legacy.accounts[0].roblosecurity, undefined, 'secrets are never carried into records');
   assert.equal(legacy.warnings.length, 1);

@@ -11,6 +11,11 @@ module.exports = [
     languageOptions: { ecmaVersion: 2023, sourceType: 'commonjs', globals: { ...globals.node } },
   },
   {
+    // E2E tests run some code inside the app window via page.evaluate().
+    files: ['test/e2e/**/*.js', 'scripts/screenshots.js'],
+    languageOptions: { globals: { ...globals.node, ...globals.browser } },
+  },
+  {
     files: ['src/renderer/js/**/*.js', 'website/js/**/*.js'],
     languageOptions: { ecmaVersion: 2023, sourceType: 'module', globals: { ...globals.browser } },
   },
